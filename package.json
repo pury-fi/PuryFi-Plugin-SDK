@@ -33,7 +33,6 @@
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json && node ./scripts/rename-cjs.mjs",
     "build": "npm run build:esm && npm run build:cjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

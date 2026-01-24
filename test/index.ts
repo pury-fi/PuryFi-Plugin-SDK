@@ -48,6 +48,9 @@ puryfiSDK.on("close", () => {
     console.log("Connection to PuryFi closed.");
 });
 
+/**
+ * Event message received from PuryFi.
+ */
 puryfiSDK.on("event", (message) => {
     console.log("Received event:", message);
 });
