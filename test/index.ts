@@ -2,6 +2,7 @@ import PuryFiSocket from "@puryfi/puryfi-plugin-sdk/socket";
 import { PuryFi } from "@puryfi/puryfi-plugin-sdk";
 
 const pureSocket = new PuryFiSocket(3000);
+pureSocket.setDebug(true);
 
 const puryfiSDK = new PuryFi(
     pureSocket,
@@ -20,6 +21,7 @@ const puryfiSDK = new PuryFi(
     }
 );
 
+puryfiSDK.setDebug(true);
 /**
  * PuryFi connected and handshake complete.
  */

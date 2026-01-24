@@ -32,7 +32,7 @@
     "watch": "tsc -p tsconfig.esm.json --watch",
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json && node ./scripts/rename-cjs.mjs",
-    "build": "npm run build:esm && npm run build:cjs",
+    "build": "npm run build:esm && npm run build:cjs"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

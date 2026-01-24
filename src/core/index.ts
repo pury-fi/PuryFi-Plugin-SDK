@@ -1,3 +1,3 @@
-export * from "./config";
-export * from "./puryfi"
+export * from "./config.js";
+export * from "./puryfi.js";
 

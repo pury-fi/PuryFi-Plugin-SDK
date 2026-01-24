@@ -49,7 +49,7 @@ This creates a browser runtime based connection for Firefox browsers and an ifra
 #### Chromium browsers
 
 > [!CAUTION]
- Chromium's runtime messaging behaves differently from Firefox by JSON encoding the message payload. Since this would introduce a big performance impact on binary data like pictures, a workaround that requires manual implementation is required. Follow the next steps carefully if you are using this SDK in a Chromium extension. If your extension is used on both browser platforms, you can still do the following steps. Firefox does not mind and the workaround will just not be used at runtime.
+ Chromium's runtime messaging behaves differently from Firefox by JSON encoding the message payload. Since this would introduce a big performance impact on binary data like pictures, a workaround that requires manual implementation is needed. Follow the next steps carefully if you are using this SDK in a Chromium extension. If your extension is used on both browser platforms, you can still do the following steps. Firefox does not mind and the workaround will just not be used at runtime.
 
  1. Copy the `chromium/bridge.html` to the public directory of your extension
  2. Copy the `chromium/bridge.js` to the source directory of your extension. This can vary based on how your extension code is structured. The `<script>` tag in the bridge.html file needs to be able to load it. Do not modify the bridge files otherwise.
@@ -61,7 +61,7 @@ This creates a browser runtime based connection for Firefox browsers and an ifra
             "resources": ["bridge.html", "bridge.js"],
             "matches": ["<all_urls>"]
         }
-  ],
+    ],
  }
  ```
 

@@ -1,4 +1,4 @@
-import { PuryFiUpstream } from "../core";
+import { PuryFiUpstream } from "../core/upstream.js";
 
 export const extension = globalThis.browser ?? globalThis.chrome;
 
@@ -21,26 +21,11 @@ export class PuryFiBrowser extends PuryFiUpstream {
             this.upstream.onmessage = (event) => {
                 let data = event.data as BroadcastMessage;
                 if (data.type === "MESSAGE_FROM_PURYFI") {
-                    const listeners = this.listeners["message"];
-                    if (listeners) {
-                        for (const listener of listeners) {
-                            listener(event.data);
-                        }
-                    }
+                    this.emit("message", data.data as ArrayBuffer);
                 } else if (data.type === "CLOSE") {
-                    const listeners = this.listeners["close"];
-                    if (listeners) {
-                        for (const listener of listeners) {
-                            listener();
-                        }
-                    }
+                    this.emit("close");
                 } else if (data.type === "ERROR") {
-                    const listeners = this.listeners["error"];
-                    if (listeners) {
-                        for (const listener of listeners) {
-                            listener(event.data);
-                        }
-                    }
+                    this.emit("error", data.data as string);
                 }
             };
         } else {
@@ -48,21 +33,11 @@ export class PuryFiBrowser extends PuryFiUpstream {
             this.upstream.onMessage.addListener((message) => {
                 let tmpRaw = message as Record<string, unknown>;
                 if (tmpRaw.data instanceof ArrayBuffer) {
-                    const listeners = this.listeners["message"];
-                    if (listeners) {
-                        for (const listener of listeners) {
-                            listener(message);
-                        }
-                    }
+                    this.emit("message", tmpRaw.data);
                 }
             });
             this.upstream.onDisconnect.addListener(() => {
-                const listeners = this.listeners["close"];
-                if (listeners) {
-                    for (const listener of listeners) {
-                        listener();
-                    }
-                }
+                this.emit("close");
             });
         }
     }

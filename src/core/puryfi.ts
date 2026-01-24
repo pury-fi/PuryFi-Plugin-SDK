@@ -1,8 +1,8 @@
 import { decode, encode } from "@msgpack/msgpack";
-import { PluginConfiguration, PluginCustomConfiguration } from "./config";
-import { BasicMessage, ConfigurationMessageField, generateConfigMessage } from "./messages";
-import { PuryFiPluginActions } from "./actions";
-import { WebSocket } from "ws";
+import { PluginConfiguration, PluginCustomConfiguration } from "./config.js";
+import { BasicMessage, ConfigurationMessageField, generateConfigMessage } from "./messages.js";
+import { PuryFiPluginActions } from "./actions.js";
+import { PuryFiUpstream } from "./upstream.js";
 
 type ClientEvents = {
     error: (error: string) => void;
@@ -12,28 +12,13 @@ type ClientEvents = {
     ready: () => void;
 };
 
-export abstract class PuryFiUpstream {
-    protected listeners: { [K: string]: Set<(...args: any[]) => void> } = {};
-    abstract send(data: ArrayBuffer | string): void;
-
-    onMessage(callback: (data: ArrayBuffer | string) => void): void {
-        this.listeners["message"].add(callback);
-    }
-    onClose(callback: () => void): void {
-        this.listeners["close"].add(callback);
-    }
-    onError(callback: (error: string) => void): void {
-        this.listeners["error"].add(callback);
-    }
-}
-
 export class PuryFi {
     config: PluginConfiguration;
     customConfig: PluginCustomConfiguration;
     actions: PuryFiPluginActions;
 
-    upstream: PuryFiUpstream;
-
+    private upstream: PuryFiUpstream;
+    private debug: boolean = false;
     /**
      * Create a new PuryFi SDK instance.
      * @param upstream The upstream connection (WebSocket/Port)
@@ -45,6 +30,9 @@ export class PuryFi {
         this.customConfig = customConfig;
         this.config = config;
         this.actions = new PuryFiPluginActions(this);
+        upstream.on("message", (data) => this.handleMessage(data));
+        upstream.on("close", () => this.handleClose());
+        upstream.on("error", (error) => this.handleError(error));
     }
 
     private listeners: { [K in keyof ClientEvents]?: Set<ClientEvents[K]> } = {};
@@ -121,22 +109,42 @@ export class PuryFi {
      * @param message Message Object to send to PuryFi
      */
     sendMessage(message: BasicMessage) {
+        this.log("Sending message to PuryFi:", JSON.stringify(message));
         let encoded = encode(message);
         const arrayBuffer = encoded.buffer.slice(
             encoded.byteOffset,
             encoded.byteOffset + encoded.byteLength
         );
         this.upstream.send(arrayBuffer);
-        return;
     }
 
+    /**
+     * Enable or disable debug logging.
+     * @param enabled debug state
+     */
+    setDebug(enabled: boolean) {
+        this.debug = enabled;
+    }
+
+    private log(...args: any[]) {
+        if (this.debug) {
+            console.log("[PuryFi SDK]", ...args);
+        }
+    }
+
+    /**
+     * Handle incoming message from upstream connection.
+     * @param payload The raw payload data
+     */
     private handleMessage(payload: any) {
         let message = decode(payload) as BasicMessage;
         switch (message.type) {
             case "handshake":
+                this.log("Received handshake message from PuryFi");
                 this.handleHandshake(message);
                 break;
             case "event":
+                this.log("Received event message from PuryFi:", message.name);
                 this.emit("event", message);
                 break;
         }
@@ -146,6 +154,7 @@ export class PuryFi {
      * Handle upstream connection close event.
      */
     private handleClose() {
+        this.log("Upstream connection closed");
         this.emit("close");
     }
 
@@ -154,31 +163,38 @@ export class PuryFi {
      * @param error Error message
      */
     private handleError(error: string) {
+        this.log("Upstream connection error:", error);
         this.emit("error", error);
     }
 
     private handleHandshake(message: BasicMessage) {
         switch (message.name) {
             case "hello":
+                this.log("Received handshake hello from PuryFi");
                 this.sendMessage({
                     type: "handshake",
-                    name: "config",
+                    name: "intents",
                     data: {
                         intents: this.config.intents
                     }
                 })
+                this.log("Sent configuration intents to PuryFi");
                 break;
             case "ok":
+                this.log("Received handshake intents OK from PuryFi");
                 this.sendMessage({
                     type: "handshake",
                     name: "config",
                     data: generateConfigMessage(this.config, this.customConfig)
                 })
+                this.log("Sent configuration data to PuryFi");
                 break;
             case "refused":
+                this.log("Received handshake intents REFUSED from PuryFi");
                 this.emit("error", "Connection refused by PuryFi client. Intents rejected.");
                 break;
             case "config":
+                this.log("Received configuration data from PuryFi");
                 let configData = message.data as ConfigurationMessageField[];
                 configData.forEach(field => {
                     if (this.customConfig[field.fieldName] === undefined || this.customConfig[field.fieldName].value !== field.value) {
@@ -191,6 +207,7 @@ export class PuryFi {
                     }
                 });
                 this.emit("ready");
+                this.log("Emitted ready event");
                 break;
         }
     }
