@@ -6,13 +6,13 @@ export interface PluginConfigMessage {
     description?: string;
     author?: string;
     website?: string;
-    customConfigurations: { value: string | number | boolean, valueType: 'string' | 'number' | 'boolean', displayName: string, fieldName: string }[]
+    configuration: { value: string | number | boolean, valueType: 'string' | 'number' | 'boolean', displayName: string, fieldName: string }[]
 }
 
 export function generateConfigMessage(config: PluginConfiguration, customConfig?: PluginCustomConfiguration): PluginConfigMessage {
     return {
         ...config,
-        customConfigurations: customConfig ? Object.entries(customConfig).map(([fieldName, field]) => ({
+        configuration: customConfig ? Object.entries(customConfig).map(([fieldName, field]) => ({
             ...field,
             fieldName
         })) : []
