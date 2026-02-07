@@ -131,6 +131,7 @@ export class PuryFi {
    * @param message Message Object to send to PuryFi
    */
   sendMessage(message: BasicMessage) {
+    message.data = replaceUndefinedWithWorkaround(message.data);
     let uid = uuidv4();
     this.log("Sending message to PuryFi:", JSON.stringify(message));
     let encoded = encode({ ...message, message_id: uid });
@@ -174,7 +175,9 @@ export class PuryFi {
       case "query":
         this.log("Received query response from PuryFi:", message.name);
         if (message.message_id && this.responseHooks[message.message_id]) {
-          this.responseHooks[message.message_id](message.data);
+          this.responseHooks[message.message_id](
+            replaceWorkaroundWithUndefined(message.data),
+          );
         } else {
           this.log(
             "No response hook found for message ID:",
@@ -272,5 +275,37 @@ export class PuryFi {
         resolve(response);
       };
     });
+  }
+}
+
+function replaceUndefinedWithWorkaround(obj: any): any {
+  if (obj === undefined) {
+    return "MSGPACK_UNDEFINED_WORKAROUND";
+  } else if (Array.isArray(obj)) {
+    return obj.map(replaceUndefinedWithWorkaround);
+  } else if (obj && typeof obj === "object") {
+    const newObj: any = {};
+    for (const key in obj) {
+      newObj[key] = replaceUndefinedWithWorkaround(obj[key]);
+    }
+    return newObj;
+  } else {
+    return obj;
+  }
+}
+
+function replaceWorkaroundWithUndefined(obj: any): any {
+  if (obj === "MSGPACK_UNDEFINED_WORKAROUND") {
+    return undefined;
+  } else if (Array.isArray(obj)) {
+    return obj.map(replaceWorkaroundWithUndefined);
+  } else if (obj && typeof obj === "object") {
+    const newObj: any = {};
+    for (const key in obj) {
+      newObj[key] = replaceWorkaroundWithUndefined(obj[key]);
+    }
+    return newObj;
+  } else {
+    return obj;
   }
 }
