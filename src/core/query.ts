@@ -271,7 +271,7 @@ export type QueryResult<Q> = Q extends { op: "get"; path: infer P }
    ? P extends ReadOnlyPath
       ? ReadOnlyValue<P>
       : never
-   : null;
+   : undefined;
 
 export type QueriesResult<Queries extends readonly Query[]> = {
    [K in keyof Queries]: QueryResult<Queries[K]>;

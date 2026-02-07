@@ -131,7 +131,6 @@ export class PuryFi {
    * @param message Message Object to send to PuryFi
    */
   sendMessage(message: BasicMessage) {
-    message.data = replaceUndefinedWithWorkaround(message.data);
     let uid = uuidv4();
     this.log("Sending message to PuryFi:", JSON.stringify(message));
     let encoded = encode({ ...message, message_id: uid });
@@ -278,24 +277,8 @@ export class PuryFi {
   }
 }
 
-function replaceUndefinedWithWorkaround(obj: any): any {
-  if (obj === undefined) {
-    return "MSGPACK_UNDEFINED_WORKAROUND";
-  } else if (Array.isArray(obj)) {
-    return obj.map(replaceUndefinedWithWorkaround);
-  } else if (obj && typeof obj === "object") {
-    const newObj: any = {};
-    for (const key in obj) {
-      newObj[key] = replaceUndefinedWithWorkaround(obj[key]);
-    }
-    return newObj;
-  } else {
-    return obj;
-  }
-}
-
 function replaceWorkaroundWithUndefined(obj: any): any {
-  if (obj === "MSGPACK_UNDEFINED_WORKAROUND") {
+  if (obj === null) {
     return undefined;
   } else if (Array.isArray(obj)) {
     return obj.map(replaceWorkaroundWithUndefined);
