@@ -1,7 +1,7 @@
 {
   "name": "puryfi-plugin-sdk",
   "version": "1.0.0",
-  "description": "",
+  "description": "SDK for developing PuryFi plugins",
   "license": "ISC",
   "author": "",
   "type": "module",

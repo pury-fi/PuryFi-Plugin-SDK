@@ -26,7 +26,12 @@ puryfiSDK.setDebug(true);
  * PuryFi connected and handshake complete.
  */
 puryfiSDK.on("ready", () => {
-    puryfiSDK.actions.connectPurevision();
+    console.log("PuryFi plugin is ready!");
+    puryfiSDK.sendQueries({op: "get", path: "lockConfiguration.timerPlus"}).then((result) => {
+        console.log("Query result:", result);
+    }).catch((error) => {
+        console.error("Query error:", error);
+    });
 });
 
 /**

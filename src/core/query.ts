@@ -276,11 +276,3 @@ export type QueryResult<Q> = Q extends { op: "get"; path: infer P }
 export type QueriesResult<Queries extends readonly Query[]> = {
    [K in keyof Queries]: QueryResult<Queries[K]>;
 };
-
-export function sendQueries<Queries extends readonly Query[]>(
-   ...queries: Queries
-): QueriesResult<Queries> {
-   // TODO: Implement
-
-   throw new Error("Not implemented");
-}

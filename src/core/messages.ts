@@ -20,9 +20,10 @@ export function generateConfigMessage(config: PluginConfiguration, customConfig?
 }
 
 export interface BasicMessage {
-    type: "event" | "handshake" | "action",
+    type: "event" | "handshake" | "action" | "query",
     name: string,
     data: any
+    message_id?: string;
 }
 
 export interface ConfigurationMessageField {
