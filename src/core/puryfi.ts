@@ -256,7 +256,6 @@ export class PuryFi {
     ...queries: Queries
   ): Promise<QueriesResult<Queries>> {
     return new Promise((resolve, reject) => {
-      // TODO: Implement
       let uid = this.sendMessage({
         type: "query",
         name: "request",
