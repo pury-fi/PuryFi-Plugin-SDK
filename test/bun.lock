@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 0,
+  "workspaces": {
+    "": {
+      "name": "test",
+      "dependencies": {
+        "@puryfi/puryfi-plugin-sdk": "file:..",
+      },
+    },
+  },
+  "packages": {
+    "@puryfi/puryfi-plugin-sdk": ["..@file:..", {}],
+  }
+}

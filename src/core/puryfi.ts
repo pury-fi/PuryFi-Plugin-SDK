@@ -1,148 +1,227 @@
 import { decode, encode } from "@msgpack/msgpack";
-import { PluginConfiguration, PluginCustomConfiguration } from "./config.js";
 import {
-   BasicMessage,
-   ConfigurationMessageField,
-   generateConfigurationMessage,
+   ExtractByTypeArgument,
+   IncomingMessage,
+   IncomingMessageObject,
+   OutgoingMessage,
+   PayloadArgument,
+   Return,
+   TypeArgument,
 } from "./messages.js";
-import { PuryFiPluginActions } from "./actions.js";
 import { PuryFiUpstream } from "./upstream.js";
-import { QueriesResult, Query } from "./query.js";
+import { isNumber, isObject, isUndefined } from "./type-util.js";
+import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
 
-type ClientEvents = {
+type Events = {
+   message: (message: IncomingMessageObject) => void;
    error: (error: string) => void;
-   event: (event: BasicMessage) => void;
-   config: (key: string, value: string | number | boolean) => void;
+   open: () => void;
    close: () => void;
-   ready: () => void;
 };
 
-function uuidv4() {
-   return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-      (
-         +c ^
-         (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))
-      ).toString(16)
-   );
-}
+export type Listener<T> = (payload: PayloadArgument<T>) => Promise<Return<T>>;
 
-export class PuryFi {
-   config: PluginConfiguration;
-   customConfig: PluginCustomConfiguration;
-   actions: PuryFiPluginActions;
-
-   private upstream: PuryFiUpstream;
+export class PuryFiConnection {
+   private messageListeners: {
+      [K in TypeArgument<IncomingMessage>]?: Set<
+         Listener<ExtractByTypeArgument<IncomingMessage, K>>
+      >;
+   } = {};
+   private onceMessageListeners: {
+      [K in TypeArgument<IncomingMessage>]?: Set<
+         Listener<ExtractByTypeArgument<IncomingMessage, K>>
+      >;
+   } = {};
+   private listeners: {
+      [K in keyof Events]?: Set<Events[K]>;
+   } = {};
+   private onceListeners: {
+      [K in keyof Events]?: Set<Events[K]>;
+   } = {};
+   private responseListeners: { [K in number]?: (response: any) => void } = {};
+   private nextResponseId = 0;
    private debug: boolean = false;
-   private responseHooks: { [key: string]: (response: any) => void } = {};
+
    /**
     * Create a new PuryFi SDK instance.
     * @param upstream The upstream connection (WebSocket/Port)
-    * @param config General Plugin Configuration
-    * @param customConfig Custom Config fields to display in the PuryFi UI
+    * @param manifest Plugin manifest
+    * @param configuration Custom configuration fields to display in the PuryFi UI
     */
-   constructor(
-      upstream: PuryFiUpstream,
-      config: PluginConfiguration,
-      customConfig: PluginCustomConfiguration
-   ) {
-      this.upstream = upstream;
-      this.customConfig = customConfig;
-      this.config = config;
-      this.actions = new PuryFiPluginActions(this);
+   constructor(public upstream: PuryFiUpstream) {
       upstream.on("message", (data) => this.handleMessage(data));
-      upstream.on("close", () => this.handleClose());
       upstream.on("error", (error) => this.handleError(error));
+      upstream.on("open", () => this.handleOpen());
+      upstream.on("close", () => this.handleClose());
    }
 
-   private listeners: { [K in keyof ClientEvents]?: Set<ClientEvents[K]> } = {};
-
-   private getSet<K extends keyof ClientEvents>(type: K): Set<ClientEvents[K]> {
-      const existing = this.listeners[type];
-      if (existing) return existing;
-
-      const created = new Set<ClientEvents[K]>();
-      // @ts-ignore yes typescript, I know what I'm doing
-      this.listeners[type] = created;
-      return created;
-   }
-
-   /**
-    * Register an event listener.
-    * @param type The event
-    * @param callback The callback
-    * @returns
-    */
-   addListener<K extends keyof ClientEvents>(
-      type: K,
-      callback: ClientEvents[K]
-   ): this {
-      this.getSet(type).add(callback);
-      return this;
-   }
-
-   /**
-    * Alias for addListener
-    */
-   on = this.addListener;
-
-   /**
-    * Unregister an event listener.
-    * @param type The event
-    * @param callback The callback
-    * @returns
-    */
-   off<K extends keyof ClientEvents>(type: K, callback: ClientEvents[K]): this {
-      this.listeners[type]?.delete(callback);
-      return this;
-   }
-
-   /**
-    * Register a one-time event listener.
-    * @param type The event
-    * @param callback The Callback
-    * @returns
-    */
-   once<K extends keyof ClientEvents>(
-      type: K,
-      callback: ClientEvents[K]
-   ): this {
-      const wrapper = ((...args: Parameters<ClientEvents[K]>) => {
-         this.off(type, wrapper as ClientEvents[K]);
-         (callback as any)(...args);
-      }) as ClientEvents[K];
-
-      this.addListener(type, wrapper);
-      return this;
-   }
-
-   /**
-    * Emit an event.
-    * @param type The event
-    * @param args The event arguments
-    */
-   protected emit<K extends keyof ClientEvents>(
-      type: K,
-      ...args: Parameters<ClientEvents[K]>
+   on<T extends TypeArgument<IncomingMessage>>(
+      event: "message",
+      type: T,
+      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+   ): void;
+   on<K extends keyof Events>(event: K, listener: Events[K]): void;
+   on<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+      ...args:
+         | [
+              event: "message",
+              type: T,
+              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+           ]
+         | [event: K, listener: Events[K]]
    ): void {
-      this.listeners[type]?.forEach((cb) => (cb as any)(...args));
+      if (
+         args[0] === "message" &&
+         typeof args[1] === "string" &&
+         typeof args[2] === "function"
+      ) {
+         const [, type, listener] = args;
+         if (this.messageListeners[type] === undefined) {
+            // @ts-ignore
+            this.messageListeners[type] = new Set();
+         }
+         this.messageListeners[type].add(listener);
+      } else if (typeof args[0] === "string" && typeof args[1] === "function") {
+         const [event, listener] = args;
+         if (this.listeners[event] === undefined) {
+            // @ts-ignore
+            this.listeners[event] = new Set();
+         }
+         // @ts-ignore
+         this.listeners[event].add(listener);
+      }
    }
 
-   /**
-    * Send a message to PuryFi.
-    * If you are using this SDK, you probably don't need to use this function directly.
-    * Look at PuryFi.actions for higher level functions.
-    * @param message Message Object to send to PuryFi
-    */
-   sendMessage(message: BasicMessage) {
-      let uid = uuidv4();
-      this.log("Sending message to PuryFi:", JSON.stringify(message));
-      let encoded = encode({ ...message, message_id: uid });
-      const arrayBuffer = encoded.buffer.slice(
-         encoded.byteOffset,
-         encoded.byteOffset + encoded.byteLength
+   once<T extends TypeArgument<IncomingMessage>>(
+      event: "message",
+      type: T,
+      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+   ): void;
+   once<K extends keyof Events>(event: K, listener: Events[K]): void;
+   once<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+      ...args:
+         | [
+              event: "message",
+              type: T,
+              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+           ]
+         | [event: K, listener: Events[K]]
+   ): void {
+      if (
+         args[0] === "message" &&
+         typeof args[1] === "string" &&
+         typeof args[2] === "function"
+      ) {
+         const [, type, listener] = args;
+         if (this.onceMessageListeners[type] === undefined) {
+            // @ts-ignore
+            this.onceMessageListeners[type] = new Set();
+         }
+         this.onceMessageListeners[type].add(listener);
+      } else if (typeof args[0] === "string" && typeof args[1] === "function") {
+         const [event, listener] = args;
+         if (this.onceListeners[event] === undefined) {
+            // @ts-ignore
+            this.onceListeners[event] = new Set();
+         }
+         // @ts-ignore
+         this.onceListeners[event].add(listener);
+      }
+   }
+
+   // TODO: Test the off method
+
+   off<T extends TypeArgument<IncomingMessage>>(
+      event: "message",
+      type: T,
+      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+   ): void;
+   off<K extends keyof Events>(event: K, listener: Events[K]): void;
+   off<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+      ...args:
+         | [
+              event: "message",
+              type: T,
+              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+           ]
+         | [event: K, listener: Events[K]]
+   ): void {
+      if (
+         args[0] === "message" &&
+         typeof args[1] === "string" &&
+         typeof args[2] === "function"
+      ) {
+         const [, type, listener] = args;
+         this.messageListeners[type]?.delete(listener);
+         this.onceMessageListeners[type]?.delete(listener);
+      } else if (typeof args[0] === "string" && typeof args[1] === "function") {
+         const [event, listener] = args;
+         // @ts-ignore
+         this.listeners[event]?.delete(listener);
+         // @ts-ignore
+         this.onceListeners[event]?.delete(listener);
+      }
+   }
+
+   private emit<K extends keyof Events>(
+      event: K,
+      ...args: Parameters<Events[K]>
+   ): void {
+      this.onceListeners[event]?.forEach((listener) => {
+         // @ts-ignore
+         listener(...args);
+      });
+      delete this.onceListeners[event];
+      this.listeners[event]?.forEach((listener) =>
+         // @ts-ignore
+         listener(...args)
       );
-      this.upstream.send(arrayBuffer);
-      return uid;
+   }
+
+   private emitMessage(message: IncomingMessageObject): void {
+      this.emit("message", message);
+      this.onceMessageListeners[message.type]?.forEach((listener) =>
+         // @ts-ignore
+         listener(message.payload)
+      );
+      delete this.onceMessageListeners[message.type];
+      this.messageListeners[message.type]?.forEach((listener) =>
+         // @ts-ignore
+         listener(message.payload)
+      );
+   }
+
+   // TODO: Handle transferables
+
+   // TODO: Timeout waiting for responses
+
+   // TODO: Document
+
+   // TODO: Allow this to send multiple messages at once
+
+   // TODO: Consider throwing when receiving an error response
+
+   async sendMessage<T extends TypeArgument<OutgoingMessage>>(
+      type: T,
+      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,
+      transfer: Transferable[] = []
+   ): Promise<Return<ExtractByTypeArgument<OutgoingMessage, T>>> {
+      return await new Promise<
+         Return<ExtractByTypeArgument<OutgoingMessage, T>>
+      >((resolve) => {
+         const responseId = this.nextResponseId;
+         this.nextResponseId++;
+
+         const encodedMessage = encode({ type, payload, responseId });
+         const encodedMessageSlice = encodedMessage.buffer.slice(
+            encodedMessage.byteOffset,
+            encodedMessage.byteOffset + encodedMessage.byteLength
+         );
+
+         this.upstream.send(encodedMessageSlice);
+
+         this.responseListeners[responseId] = resolve;
+      });
    }
 
    /**
@@ -164,29 +243,46 @@ export class PuryFi {
     * @param payload The raw payload data
     */
    private handleMessage(payload: any) {
-      let message = decode(payload) as BasicMessage;
-      switch (message.type) {
-         case "handshake":
-            this.log("Received handshake message from PuryFi");
-            this.handleHandshake(message);
-            break;
-         case "event":
-            this.log("Received event message from PuryFi:", message.name);
-            this.emit("event", message);
-            break;
-         case "query":
-            this.log("Received query response from PuryFi:", message.name);
-            if (message.message_id && this.responseHooks[message.message_id]) {
-               this.responseHooks[message.message_id](
-                  replaceWorkaroundWithUndefined(message.data)
-               );
-            } else {
-               this.log(
-                  "No response hook found for message ID:",
-                  message.message_id
-               );
-            }
+      let message = decode(payload);
+
+      if (!isObject(message)) {
+         // TODO: Log error
+
+         return;
       }
+
+      if (isUndefined(message.type)) {
+         if (!isNumber(message.responseId)) {
+            // TODO: Log error
+
+            return;
+         }
+
+         let responseCallback = this.responseListeners[message.responseId];
+         if (responseCallback === undefined) {
+            this.log(
+               "No response hook found for message ID:",
+               message.responseId
+            );
+            return;
+         }
+
+         responseCallback(replaceWorkaroundWithUndefined(message.payload));
+
+         delete this.responseListeners[message.responseId];
+      } else {
+         // TODO: Validate message type and payload
+
+         this.emitMessage(message as any);
+      }
+   }
+
+   /**
+    * Handle upstream connection open event.
+    */
+   private handleOpen() {
+      this.log("Upstream connection open");
+      this.emit("open");
    }
 
    /**
@@ -204,82 +300,6 @@ export class PuryFi {
    private handleError(error: string) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
-   }
-
-   private handleHandshake(message: BasicMessage) {
-      switch (message.name) {
-         case "hello":
-            this.log("Received handshake hello from PuryFi");
-            this.sendMessage({
-               type: "handshake",
-               name: "intents",
-               data: {
-                  intents: this.config.intents,
-               },
-            });
-            this.log("Sent configuration intents to PuryFi");
-            break;
-         case "ok":
-            this.log("Received handshake intents OK from PuryFi");
-            this.sendMessage({
-               type: "handshake",
-               name: "config",
-               data: generateConfigurationMessage(
-                  this.config,
-                  this.customConfig
-               ),
-            });
-            this.log("Sent configuration data to PuryFi");
-            break;
-         case "refused":
-            this.log("Received handshake intents REFUSED from PuryFi");
-            this.emit(
-               "error",
-               "Connection refused by PuryFi client. Intents rejected."
-            );
-            break;
-         case "config":
-            this.log("Received configuration data from PuryFi");
-            let configData = message.data as ConfigurationMessageField[];
-            configData.forEach((field) => {
-               if (
-                  this.customConfig[field.fieldName] === undefined ||
-                  this.customConfig[field.fieldName].value !== field.value
-               ) {
-                  this.customConfig[field.fieldName] = {
-                     value: field.value,
-                     valueType: field.valueType,
-                     displayName: field.displayName,
-                  };
-                  this.emit("config", field.fieldName, field.value);
-               }
-            });
-            this.emit("ready");
-            this.log("Emitted ready event");
-            break;
-      }
-   }
-
-   sendQueries<Queries extends readonly Query[]>(
-      ...queries: Queries
-   ): Promise<QueriesResult<Queries>> {
-      return new Promise((resolve, reject) => {
-         let uid = this.sendMessage({
-            type: "query",
-            name: "request",
-            data: { queries },
-         });
-
-         let timer = setTimeout(() => {
-            reject("Query timed out");
-         }, 5000);
-
-         this.responseHooks[uid] = (response: QueriesResult<Queries>) => {
-            clearTimeout(timer);
-            delete this.responseHooks[uid];
-            resolve(response);
-         };
-      });
    }
 }
 

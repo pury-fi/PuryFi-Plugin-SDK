@@ -18,6 +18,7 @@ export class PuryFiBrowser extends PuryFiUpstream {
       super();
       if (isChromiumExtension()) {
          this.upstream = new BroadcastChannel(channelName);
+
          this.upstream.onmessage = (event) => {
             let data = event.data as BroadcastMessage;
             if (data.type === "MESSAGE_FROM_PURYFI") {
@@ -28,6 +29,7 @@ export class PuryFiBrowser extends PuryFiUpstream {
                this.emit("error", data.data as string);
             }
          };
+         this.emit("open");
       } else {
          this.upstream = extension.runtime.connect({ name: channelName });
          this.upstream.onMessage.addListener((message) => {

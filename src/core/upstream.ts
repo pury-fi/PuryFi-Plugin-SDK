@@ -1,6 +1,7 @@
 export type UpstreamEvents = {
    error: (error: string) => void;
    message: (event: ArrayBuffer) => void;
+   open: () => void;
    close: () => void;
 };
 

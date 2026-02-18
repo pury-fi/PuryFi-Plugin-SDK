@@ -1,17 +1,9 @@
-import { PuryFi } from ".";
+import { PuryFiConnection } from ".";
 
 export class PuryFiPluginActions {
-   puryfi: PuryFi;
+   puryfi: PuryFiConnection;
 
-   constructor(puryfi: PuryFi) {
+   constructor(puryfi: PuryFiConnection) {
       this.puryfi = puryfi;
-   }
-
-   connectPurevision() {
-      this.puryfi.sendMessage({
-         type: "action",
-         name: "connect_purevision",
-         data: {},
-      });
    }
 }

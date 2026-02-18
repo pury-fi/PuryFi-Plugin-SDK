@@ -1,6 +1,8 @@
 import WebSocket, { WebSocketServer } from "ws";
 import { PuryFiUpstream } from "../core/upstream.js";
 
+// TODO: Handle multiple clients attempting to connect
+
 export default class PuryFiSocket extends PuryFiUpstream {
    private socketServer: WebSocketServer;
    private clients: WebSocket[] = [];
@@ -25,8 +27,10 @@ export default class PuryFiSocket extends PuryFiUpstream {
       });
       this.socketServer.on("connection", (ws: WebSocket) => {
          this.log("New client connected to PuryFiSocket on port", port);
+
          ws.binaryType = "arraybuffer";
          this.clients.push(ws);
+
          ws.on("message", (data: WebSocket.Data) => {
             this.log(
                "Received message from client on PuryFiSocket on port",
@@ -44,6 +48,8 @@ export default class PuryFiSocket extends PuryFiUpstream {
             this.log("Client error on PuryFiSocket on port", port, err.message);
             this.emit("error", err.message);
          });
+
+         this.emit("open");
       });
    }
 }

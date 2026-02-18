@@ -1,74 +1,81 @@
 import PuryFiSocket from "@puryfi/puryfi-plugin-sdk/socket";
-import { PuryFi } from "@puryfi/puryfi-plugin-sdk";
+import {
+   PluginConfiguration,
+   PluginManifest,
+   PuryFiConnection,
+} from "@puryfi/puryfi-plugin-sdk";
+import { Intent } from "../dist/esm/core/messages";
 
-const pureSocket = new PuryFiSocket(3000);
-pureSocket.setDebug(true);
+const upstreamConnection = new PuryFiSocket(8085);
+upstreamConnection.setDebug(true);
+const connection = new PuryFiConnection(upstreamConnection);
+connection.setDebug(true);
 
-const puryfiSDK = new PuryFi(
-   pureSocket,
-   {
-      name: "Test Plugin",
-      intents: ["detection"],
-      version: "1.0.0",
-      description: "A test plugin for PuryFi",
+const intents: Intent[] = [
+   "readEnabled",
+   "writeEnabled",
+   "readLockConfiguration",
+   "writeLockConfiguration",
+];
+
+const manifest: PluginManifest = {
+   name: "Example Plugin",
+   version: "1.0.0",
+   description: "An example plugin",
+};
+
+const configuration: PluginConfiguration = {
+   exampleField: {
+      value: 0,
+      type: "number",
+      name: "Example Field",
    },
-   {
-      cool: {
-         value: true,
-         valueType: "boolean",
-         displayName: "Cool Setting",
-      },
-   }
-);
+};
 
-puryfiSDK.setDebug(true);
-/**
- * PuryFi connected and handshake complete.
- */
-puryfiSDK.on("ready", () => {
-   console.log("PuryFi plugin is ready!");
-   puryfiSDK
-      .sendQueries(
-         { op: "get", path: "lockConfiguration.timerPlus" },
-         {
-            op: "set",
-            path: "lockConfiguration.timerPlus.timesPerLabel",
-            value: { "4": 4 },
-         },
-         { op: "get", path: "lockConfiguration.timerPlus" }
-      )
-      .then((result) => {
-         console.log("Query result:", result);
-      })
-      .catch((error) => {
-         console.error("Query error:", error);
+connection.once("open", async () => {
+   console.log("Connected to PuryFi extension");
+
+   connection.once("message", "ready", async ({ version }) => {
+      console.log(`Connected PuryFi ${version} is ready to receive messages`);
+
+      console.log("Setting manifest");
+      await connection.sendMessage("setManifest", { manifest });
+
+      console.log("Setting configuration");
+      await connection.sendMessage("setConfiguration", {
+         configuration,
       });
-});
 
-/**
- * Configuration was changed in PuryFi UI.
- */
-puryfiSDK.on("config", (fieldName: string, value: any) => {
-   console.log(`Config field ${fieldName} changed to ${value}`);
-});
+      console.log("Requesting intents");
+      const response = await connection.sendMessage("getIntents", {});
 
-/**
- * Error from PuryFi or upstream connection.
- */
-puryfiSDK.on("error", (error: string) => {
-   console.error("Error from PuryFi:", error);
-});
+      console.log("Received intents", response.intents);
 
-/**
- * Upstream connection closed.
- */
-puryfiSDK.on("close", () => {
-   console.log("Connection to PuryFi closed.");
-});
+      if (!intents.every((intent) => response.intents.includes(intent))) {
+         await new Promise<void>(async (resolve) => {
+            connection.on(
+               "message",
+               "intentsGranted",
+               async function listener({ intents }) {
+                  if (
+                     intents.every((intent) =>
+                        response.intents.includes(intent)
+                     )
+                  ) {
+                     console.log("Required intents granted");
 
-/**
- * Event message received from PuryFi.
- */
-puryfiSDK.on("event", (message) => {
-   console.log("Received event:", message);
+                     connection.off("message", "intentsGranted", listener);
+
+                     resolve();
+                  }
+               }
+            );
+
+            console.log("Requesting intents");
+            await connection.sendMessage("requestIntents", {
+               intents,
+            });
+         });
+      }
+   });
 });

@@ -276,30 +276,3 @@ export type WriteOnlyValue<P extends Path> =
    ValueOfAccess<StateAccess, P> extends AccessFor<ValueOf<State, P>>
       ? WriteOnly<ValueOf<State, P>, ValueOfAccess<StateAccess, P>>
       : never;
-
-type GetQuery<P extends ReadOnlyPath> = {
-   op: "get";
-   path: P;
-};
-
-type AnyGetQuery = { [P in ReadOnlyPath]: GetQuery<P> }[ReadOnlyPath];
-
-type SetQuery<P extends WriteOnlyPath> = {
-   op: "set";
-   path: P;
-   value: WriteOnlyValue<P>;
-};
-
-type AnySetQuery = { [P in WriteOnlyPath]: SetQuery<P> }[WriteOnlyPath];
-
-export type Query = AnyGetQuery | AnySetQuery;
-
-export type QueryResult<Q> = Q extends { op: "get"; path: infer P }
-   ? P extends ReadOnlyPath
-      ? ReadOnlyValue<P>
-      : never
-   : undefined;
-
-export type QueriesResult<Queries extends readonly Query[]> = {
-   [K in keyof Queries]: QueryResult<Queries[K]>;
-};
