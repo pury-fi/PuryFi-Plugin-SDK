@@ -14,7 +14,7 @@ import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
 
 type Events = {
    message: (message: IncomingMessageObject) => void;
-   error: (error: string) => void;
+   error: (error: PuryFiError) => void;
    open: () => void;
    close: () => void;
 };
@@ -38,7 +38,9 @@ export class PuryFiConnection {
    private onceListeners: {
       [K in keyof Events]?: Set<Events[K]>;
    } = {};
-   private responseListeners: { [K in number]?: (response: any) => void } = {};
+   private responseListeners: {
+      [K in number]?: [(response: any) => void, (error: PuryFiError) => void];
+   } = {};
    private nextResponseId = 0;
    private debug: boolean = false;
 
@@ -201,6 +203,14 @@ export class PuryFiConnection {
 
    // TODO: Consider throwing when receiving an error response
 
+   /**
+    *
+    * @param type The type of message to be sent to PuryFi
+    * @param payload The message payload for the specific message type
+    * @param transfer Binary transferable
+    * @returns
+    * @throws PuryFiError
+    */
    async sendMessage<T extends TypeArgument<OutgoingMessage>>(
       type: T,
       payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,
@@ -208,7 +218,7 @@ export class PuryFiConnection {
    ): Promise<Return<ExtractByTypeArgument<OutgoingMessage, T>>> {
       return await new Promise<
          Return<ExtractByTypeArgument<OutgoingMessage, T>>
-      >((resolve) => {
+      >((resolve, reject) => {
          const responseId = this.nextResponseId;
          this.nextResponseId++;
 
@@ -220,7 +230,7 @@ export class PuryFiConnection {
 
          this.upstream.send(encodedMessageSlice);
 
-         this.responseListeners[responseId] = resolve;
+         this.responseListeners[responseId] = [resolve, reject];
       });
    }
 
@@ -260,6 +270,14 @@ export class PuryFiConnection {
 
          let responseCallback = this.responseListeners[message.responseId];
          if (responseCallback === undefined) {
+            this.emit(
+               "error",
+               new PuryFiError(
+                  "ClientError",
+                  "Response for unknown request received",
+                  message.responseId
+               )
+            );
             this.log(
                "No response hook found for message ID:",
                message.responseId
@@ -267,7 +285,17 @@ export class PuryFiConnection {
             return;
          }
 
-         responseCallback(replaceWorkaroundWithUndefined(message.payload));
+         if (!isUndefined(message.error)) {
+            responseCallback[1](
+               new PuryFiError(
+                  "ResponseError",
+                  message.error as string,
+                  message.responseId
+               )
+            );
+         }
+
+         responseCallback[0](replaceWorkaroundWithUndefined(message.payload));
 
          delete this.responseListeners[message.responseId];
       } else {
@@ -297,7 +325,7 @@ export class PuryFiConnection {
     * Handle error event from upstream connection.
     * @param error Error message
     */
-   private handleError(error: string) {
+   private handleError(error: PuryFiError) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
    }
@@ -316,5 +344,15 @@ function replaceWorkaroundWithUndefined(obj: any): any {
       return newObj;
    } else {
       return obj;
+   }
+}
+
+export class PuryFiError extends Error {
+   constructor(
+      public name: "ResponseError" | "SocketError" | "ClientError",
+      message: string,
+      public requestId?: number
+   ) {
+      super(message);
    }
 }

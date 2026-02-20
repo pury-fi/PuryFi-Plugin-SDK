@@ -1,5 +1,6 @@
 import WebSocket, { WebSocketServer } from "ws";
 import { PuryFiUpstream } from "../core/upstream.js";
+import { PuryFiError } from "../core/index.js";
 
 // TODO: Handle multiple clients attempting to connect
 
@@ -11,6 +12,8 @@ export default class PuryFiSocket extends PuryFiUpstream {
       this.clients.forEach((client) => {
          if (client.readyState === WebSocket.OPEN) {
             client.send(data);
+         } else {
+            throw new PuryFiError("SocketError", "Message sent before connection was established")
          }
       });
    }
@@ -23,7 +26,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
       });
       this.socketServer.on("error", (err: Error) => {
          this.log("PuryFiSocket error on port", port, err.message);
-         this.emit("error", err.message);
+         this.emit("error", new PuryFiError("SocketError", err.message));
       });
       this.socketServer.on("connection", (ws: WebSocket) => {
          this.log("New client connected to PuryFiSocket on port", port);
@@ -46,7 +49,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
          });
          ws.on("error", (err: Error) => {
             this.log("Client error on PuryFiSocket on port", port, err.message);
-            this.emit("error", err.message);
+            this.emit("error", new PuryFiError("SocketError", err.message));
          });
 
          this.emit("open");

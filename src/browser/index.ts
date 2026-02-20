@@ -1,3 +1,4 @@
+import { PuryFiError } from "../core/puryfi.js";
 import { PuryFiUpstream } from "../core/upstream.js";
 
 export const extension = globalThis.browser ?? globalThis.chrome;
@@ -26,7 +27,7 @@ export class PuryFiBrowser extends PuryFiUpstream {
             } else if (data.type === "CLOSE") {
                this.emit("close");
             } else if (data.type === "ERROR") {
-               this.emit("error", data.data as string);
+               this.emit("error", new PuryFiError("SocketError", data.data as string));
             }
          };
          this.emit("open");
@@ -45,10 +46,22 @@ export class PuryFiBrowser extends PuryFiUpstream {
    }
 
    send(data: ArrayBuffer | string): void {
-      if (this.upstream instanceof BroadcastChannel) {
-         this.upstream.postMessage({ type: "SEND_TO_PURYFI", data });
-      } else {
-         this.upstream.postMessage({ data });
+      try {
+         if (this.upstream instanceof BroadcastChannel) {
+            this.upstream.postMessage({ type: "SEND_TO_PURYFI", data });
+         } else {
+            this.upstream.postMessage({ data });
+         }
+      } catch (error) {
+         if (error instanceof DOMException) {
+            if (error.name === "InvalidStateError") {
+               throw new PuryFiError("SocketError", "Socket connection already closed")
+            } else if(error.name === "DataCloneError") {
+               throw new PuryFiError("SocketError", "Data could not be serialized")
+            }
+         } else {
+            throw(error)
+         }
       }
    }
 }

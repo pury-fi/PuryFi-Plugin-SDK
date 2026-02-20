@@ -3,6 +3,7 @@ import {
    PluginConfiguration,
    PluginManifest,
    PuryFiConnection,
+   PuryFiError,
 } from "@puryfi/puryfi-plugin-sdk";
 import { Intent } from "../dist/esm/core/messages";
 
@@ -31,6 +32,10 @@ const configuration: PluginConfiguration = {
       name: "Example Field",
    },
 };
+
+connection.on("error", (error: PuryFiError) => {
+   console.log(error.message);
+})
 
 connection.once("open", async () => {
    console.log("Connected to PuryFi extension");
