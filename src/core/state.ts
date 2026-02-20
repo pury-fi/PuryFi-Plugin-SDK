@@ -190,7 +190,7 @@ export const StateAccess = {
             supportTier: {
                access: "noWrite",
                entries: {
-                  kind: {
+                  level: {
                      access: "noWrite",
                   },
                   name: {
