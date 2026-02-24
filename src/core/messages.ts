@@ -6,6 +6,7 @@ import {
    WriteOnlyPath,
    WriteOnlyValue,
 } from ".";
+import { Object } from "./object";
 
 export type TypeArgument<T> = T extends (type: infer A, payload: any) => any
    ? A
@@ -72,12 +73,7 @@ namespace IncomingMessages {
    export type StaticMediaScan = (
       type: "staticMediaScan",
       payload: {
-         objects: {
-            rect: { x: number; y: number; width: number; height: number };
-            label: number;
-            score: number;
-            id: number;
-         }[];
+         objects: Object[];
       }
    ) => void;
 }
@@ -209,12 +205,7 @@ namespace OutgoingMessages {
          // TODO: Add other properties
       }
    ) => {
-      objects: {
-         rect: { x: number; y: number; width: number; height: number };
-         label: number;
-         score: number;
-         id: number;
-      }[];
+      objects: Object[];
    };
 
    export type CensorStaticMedia = (
@@ -225,12 +216,7 @@ namespace OutgoingMessages {
       }
    ) => {
       image: ArrayBuffer;
-      objects: {
-         rect: { x: number; y: number; width: number; height: number };
-         label: number;
-         score: number;
-         id: number;
-      }[];
+      objects: Object[];
    };
 
    export type EnterLockPassword = (
@@ -289,7 +275,6 @@ export const Intents = [
    "writeWBlistConfiguration",
    "readUser",
    "readMediaProcesses",
-   "requestMediaProcesses",
    "requestMediaProcesses",
 ] as const;
 export type Intent = (typeof Intents)[number];

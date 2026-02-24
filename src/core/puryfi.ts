@@ -131,8 +131,6 @@ export class PuryFiConnection {
       }
    }
 
-   // TODO: Test the off method
-
    off<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
@@ -195,11 +193,7 @@ export class PuryFiConnection {
 
    // TODO: Handle transferables
 
-   // TODO: Timeout waiting for responses
-
    // TODO: Document
-
-   // TODO: Consider throwing when receiving an error response
 
    /**
     *
