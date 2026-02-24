@@ -202,7 +202,6 @@ namespace OutgoingMessages {
       type: "scanStaticMedia",
       payload: {
          image: ArrayBuffer;
-         // TODO: Add other properties
       }
    ) => {
       objects: Object[];
@@ -212,7 +211,7 @@ namespace OutgoingMessages {
       type: "censorStaticMedia",
       payload: {
          image: ArrayBuffer;
-         // TODO: Add other properties
+         objects?: Object[];
       }
    ) => {
       image: ArrayBuffer;

@@ -40,3 +40,25 @@ export enum Label {
    HandCovered = 24,
    Hand = 25,
 }
+
+export function isRect(value: any): value is Rect {
+   return (
+      typeof value === "object" &&
+      value !== null &&
+      typeof value.x === "number" &&
+      typeof value.y === "number" &&
+      typeof value.width === "number" &&
+      typeof value.height === "number"
+   );
+}
+
+export function isObject(value: any): value is Object {
+   return (
+      typeof value === "object" &&
+      value !== null &&
+      isRect(value.rect) &&
+      typeof value.label === "number" &&
+      typeof value.score === "number" &&
+      typeof value.id === "number"
+   );
+}
