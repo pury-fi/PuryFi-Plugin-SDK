@@ -14,7 +14,7 @@ import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
 
 type Events = {
    message: (message: IncomingMessageObject) => void;
-   error: (error: PuryFiError) => void;
+   error: (error: PuryFiConnectionError) => void;
    open: () => void;
    close: () => void;
 };
@@ -39,7 +39,10 @@ export class PuryFiConnection {
       [K in keyof Events]?: Set<Events[K]>;
    } = {};
    private responseListeners: {
-      [K in number]?: [(response: any) => void, (error: PuryFiError) => void];
+      [K in number]?: [
+         (response: any) => void,
+         (error: PuryFiConnectionError) => void,
+      ];
    } = {};
    private nextResponseId = 0;
    private debug: boolean = false;
@@ -258,6 +261,8 @@ export class PuryFiConnection {
     * @param payload The raw payload data
     */
    private handleMessage(payload: any) {
+      // TODO: Catch errors here
+
       let message = decode(payload);
 
       if (!isObject(message)) {
@@ -277,14 +282,14 @@ export class PuryFiConnection {
          if (responseCallback === undefined) {
             this.emit(
                "error",
-               new PuryFiError(
+               new PuryFiConnectionError(
                   "ClientError",
                   "Response for unknown request received",
                   message.responseId
                )
             );
             this.log(
-               "No response hook found for message ID:",
+               "No response listener found for message ID:",
                message.responseId
             );
             return;
@@ -292,7 +297,7 @@ export class PuryFiConnection {
 
          if (!isUndefined(message.error)) {
             responseCallback[1](
-               new PuryFiError(
+               new PuryFiConnectionError(
                   "ResponseError",
                   message.error as string,
                   message.responseId
@@ -330,13 +335,13 @@ export class PuryFiConnection {
     * Handle error event from upstream connection.
     * @param error Error message
     */
-   private handleError(error: PuryFiError) {
+   private handleError(error: PuryFiConnectionError) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
    }
 }
 
-export class PuryFiError extends Error {
+export class PuryFiConnectionError extends Error {
    constructor(
       public name: "ResponseError" | "SocketError" | "ClientError",
       message: string,

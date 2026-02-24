@@ -1,7 +1,7 @@
-import { PuryFiError } from ".";
+import { PuryFiConnectionError } from ".";
 
 export type UpstreamEvents = {
-   error: (error: PuryFiError) => void;
+   error: (error: PuryFiConnectionError) => void;
    message: (event: ArrayBuffer) => void;
    open: () => void;
    close: () => void;

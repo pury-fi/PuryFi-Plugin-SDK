@@ -3,7 +3,7 @@ import {
    PluginConfiguration,
    PluginManifest,
    PuryFiConnection,
-   PuryFiError,
+   PuryFiConnectionError,
 } from "@puryfi/puryfi-plugin-sdk";
 import { Intent } from "../dist/esm/core/messages";
 
@@ -30,28 +30,23 @@ const configuration: PluginConfiguration = {
    },
 };
 
-connection.on("error", (error: PuryFiError) => {
+connection.on("error", (error: PuryFiConnectionError) => {
    console.log(error.message);
 });
 
 connection.once("open", async () => {
-   console.log("Connected to PuryFi extension");
+   console.log("Connected to PuryFi");
 
    connection.once("message", "ready", async ({ version }) => {
       console.log(`Connected PuryFi ${version} is ready to receive messages`);
 
-      console.log("Setting manifest");
       await connection.sendMessage("setManifest", { manifest });
 
-      console.log("Setting configuration");
       await connection.sendMessage("setConfiguration", {
          configuration,
       });
 
-      console.log("Getting intents");
       const response = await connection.sendMessage("getIntents", {});
-
-      console.log("Received intents", response.intents);
 
       if (!intents.every((intent) => response.intents.includes(intent))) {
          await new Promise<void>(async (resolve) => {
@@ -74,7 +69,6 @@ connection.once("open", async () => {
                }
             );
 
-            console.log("Requesting intents");
             await connection.sendMessage("requestIntents", {
                intents,
             });

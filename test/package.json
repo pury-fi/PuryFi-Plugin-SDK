@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@puryfi/puryfi-plugin-sdk": "file:.."
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
   }
 }
