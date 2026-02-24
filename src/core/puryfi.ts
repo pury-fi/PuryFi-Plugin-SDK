@@ -199,8 +199,6 @@ export class PuryFiConnection {
 
    // TODO: Document
 
-   // TODO: Allow this to send multiple messages at once
-
    // TODO: Consider throwing when receiving an error response
 
    /**
@@ -211,6 +209,18 @@ export class PuryFiConnection {
     * @returns
     * @throws PuryFiError
     */
+   async sendMessage<T extends "getState", P extends ReadOnlyPath>(
+      type: T,
+      payload: { path: P },
+      transfer?: Transferable[]
+   ): Promise<{ value: ReadOnlyValue<P> }>;
+   async sendMessage<
+      T extends Exclude<TypeArgument<OutgoingMessage>, "getState">,
+   >(
+      type: T,
+      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,
+      transfer?: Transferable[]
+   ): Promise<Return<ExtractByTypeArgument<OutgoingMessage, T>>>;
    async sendMessage<T extends TypeArgument<OutgoingMessage>>(
       type: T,
       payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,

@@ -30,13 +30,13 @@ export type Return<T> = T extends (...args: any[]) => infer R ? R : never;
  * ====================================================================
  */
 
-type StateChangedPayload<P extends ReadOnlyPath> = {
+type stateChangePayload<P extends ReadOnlyPath> = {
    path: P;
    value: ReadOnlyValue<P>;
 };
 
-type AnyStateChangedPayload = {
-   [P in ReadOnlyPath]: StateChangedPayload<P>;
+type AnystateChangePayload = {
+   [P in ReadOnlyPath]: stateChangePayload<P>;
 }[ReadOnlyPath];
 
 /**
@@ -50,22 +50,27 @@ namespace IncomingMessages {
       }
    ) => void;
 
-   // TODO: Decide on how to name "event" messages, options are, to name a few, "intentsGranted", "intentsGrant", "onIntentsGrant"
+   export type ConfigurationChange = (
+      type: "configurationChange",
+      payload: {
+         configuration: PluginConfiguration;
+      }
+   ) => void;
 
-   export type IntentsGranted = (
-      type: "intentsGranted",
+   export type IntentsGrant = (
+      type: "intentsGrant",
       payload: {
          intents: Intent[];
       }
    ) => void;
 
-   export type StateChanged = (
-      type: "stateChanged",
-      payload: AnyStateChangedPayload
+   export type StateChange = (
+      type: "stateChange",
+      payload: AnystateChangePayload
    ) => void;
 
-   export type StaticMediaScanned = (
-      type: "staticMediaScanned",
+   export type StaticMediaScan = (
+      type: "staticMediaScan",
       payload: {
          objects: {
             rect: { x: number; y: number; width: number; height: number };
@@ -79,9 +84,9 @@ namespace IncomingMessages {
 
 export type IncomingMessage =
    | IncomingMessages.Ready
-   | IncomingMessages.IntentsGranted
-   | IncomingMessages.StateChanged
-   | IncomingMessages.StaticMediaScanned;
+   | IncomingMessages.IntentsGrant
+   | IncomingMessages.StateChange
+   | IncomingMessages.StaticMediaScan;
 
 export type IncomingMessageObject = {
    [K in TypeArgument<IncomingMessage>]: {

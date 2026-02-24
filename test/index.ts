@@ -29,13 +29,13 @@ const configuration: PluginConfiguration = {
    exampleField: {
       value: 0,
       type: "number",
-      name: "Example Field",
+      name: "Example field",
    },
 };
 
 connection.on("error", (error: PuryFiError) => {
    console.log(error.message);
-})
+});
 
 connection.once("open", async () => {
    console.log("Connected to PuryFi extension");
@@ -51,7 +51,7 @@ connection.once("open", async () => {
          configuration,
       });
 
-      console.log("Requesting intents");
+      console.log("Getting intents");
       const response = await connection.sendMessage("getIntents", {});
 
       console.log("Received intents", response.intents);
@@ -60,16 +60,17 @@ connection.once("open", async () => {
          await new Promise<void>(async (resolve) => {
             connection.on(
                "message",
-               "intentsGranted",
+               "intentsGrant",
                async function listener({ intents }) {
+                  console.log("Received intentsGrant message", intents);
                   if (
-                     intents.every((intent) =>
-                        response.intents.includes(intent)
+                     response.intents.every((intent) =>
+                        intents.includes(intent)
                      )
                   ) {
                      console.log("Required intents granted");
 
-                     connection.off("message", "intentsGranted", listener);
+                     connection.off("message", "intentsGrant", listener);
 
                      resolve();
                   }
