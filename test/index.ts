@@ -5,7 +5,6 @@ import {
    PuryFiConnection,
    PuryFiError,
 } from "@puryfi/puryfi-plugin-sdk";
-import fs from "fs";
 import { Intent } from "../dist/esm/core/messages";
 
 const upstreamConnection = new PuryFiSocket(8085);
@@ -13,19 +12,14 @@ upstreamConnection.setDebug(true);
 const connection = new PuryFiConnection(upstreamConnection);
 connection.setDebug(true);
 
-const intents: Intent[] = [
-   "readEnabled",
-   "writeEnabled",
-   "readLockConfiguration",
-   "writeLockConfiguration",
-   "readMediaProcesses",
-   "requestMediaProcesses",
-];
+const intents: Intent[] = [];
 
 const manifest: PluginManifest = {
    name: "Example Plugin",
    version: "1.0.0",
    description: "An example plugin",
+   author: null,
+   website: null,
 };
 
 const configuration: PluginConfiguration = {
@@ -86,13 +80,5 @@ connection.once("open", async () => {
             });
          });
       }
-
-      console.log("Requesting static media scan");
-
-      const imagePath = "...";
-      const imageData = await fs.promises.readFile(imagePath);
-      const { objects } = await connection.sendMessage("scanStaticMedia", {
-         image: imageData.buffer,
-      });
    });
 });

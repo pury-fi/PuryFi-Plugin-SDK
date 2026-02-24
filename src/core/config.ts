@@ -1,9 +1,9 @@
 export interface PluginManifest {
-   name?: string;
-   version?: string;
-   description?: string;
-   author?: string;
-   website?: string;
+   name: null | string;
+   version: null | string;
+   description: null | string;
+   author: null | string;
+   website: null | string;
 }
 
 export interface PluginConfigurationField {

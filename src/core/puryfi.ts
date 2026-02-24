@@ -227,6 +227,7 @@ export class PuryFiConnection {
          this.nextResponseId++;
 
          const encodedMessage = encode({ type, payload, responseId });
+
          const encodedMessageSlice = encodedMessage.buffer.slice(
             encodedMessage.byteOffset,
             encodedMessage.byteOffset + encodedMessage.byteLength
@@ -299,7 +300,7 @@ export class PuryFiConnection {
             );
          }
 
-         responseCallback[0](replaceWorkaroundWithUndefined(message.payload));
+         responseCallback[0](message.payload);
 
          delete this.responseListeners[message.responseId];
       } else {
@@ -332,22 +333,6 @@ export class PuryFiConnection {
    private handleError(error: PuryFiError) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
-   }
-}
-
-function replaceWorkaroundWithUndefined(obj: any): any {
-   if (obj === null) {
-      return undefined;
-   } else if (Array.isArray(obj)) {
-      return obj.map(replaceWorkaroundWithUndefined);
-   } else if (obj && typeof obj === "object") {
-      const newObj: any = {};
-      for (const key in obj) {
-         newObj[key] = replaceWorkaroundWithUndefined(obj[key]);
-      }
-      return newObj;
-   } else {
-      return obj;
    }
 }
 

@@ -1,13 +1,13 @@
 export type State = {
    enabled: boolean;
-   lockConfiguration?: {
-      password?: {
+   lockConfiguration: null | {
+      password: null | {
          secret: string;
       };
-      timer?: {
+      timer: null | {
          endTime: number;
       };
-      timerPlus?: {
+      timerPlus: null | {
          timesPerLabel: Record<number, number>;
       };
       emergencyClientToken: number;
@@ -18,10 +18,10 @@ export type State = {
       whitelist: { mode: "text" | "regex"; value: string }[];
       blacklist: { mode: "text" | "regex"; value: string }[];
    };
-   user?: {
+   user: null | {
       username: string;
       supportTier: {
-         level?: number;
+         level: null | number;
          name: string;
       };
    };

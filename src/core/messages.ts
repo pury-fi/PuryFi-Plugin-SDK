@@ -201,7 +201,7 @@ namespace OutgoingMessages {
    export type ScanStaticMedia = (
       type: "scanStaticMedia",
       payload: {
-         image: ArrayBuffer;
+         image: Uint8Array;
       }
    ) => {
       objects: Object[];
@@ -210,11 +210,11 @@ namespace OutgoingMessages {
    export type CensorStaticMedia = (
       type: "censorStaticMedia",
       payload: {
-         image: ArrayBuffer;
-         objects?: Object[];
+         image: Uint8Array;
+         objects: null | Object[];
       }
    ) => {
-      image: ArrayBuffer;
+      image: Uint8Array;
       objects: Object[];
    };
 
