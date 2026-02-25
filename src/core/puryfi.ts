@@ -194,10 +194,6 @@ export class PuryFiConnection {
       );
    }
 
-   // TODO: Handle transferables
-
-   // TODO: Document
-
    /**
     *
     * @param type The type of message to be sent to PuryFi
@@ -208,20 +204,17 @@ export class PuryFiConnection {
     */
    async sendMessage<T extends "getState", P extends ReadOnlyPath>(
       type: T,
-      payload: { path: P },
-      transfer?: Transferable[]
+      payload: { path: P }
    ): Promise<{ value: ReadOnlyValue<P> }>;
    async sendMessage<
       T extends Exclude<TypeArgument<OutgoingMessage>, "getState">,
    >(
       type: T,
-      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,
-      transfer?: Transferable[]
+      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>
    ): Promise<Return<ExtractByTypeArgument<OutgoingMessage, T>>>;
    async sendMessage<T extends TypeArgument<OutgoingMessage>>(
       type: T,
-      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>,
-      transfer: Transferable[] = []
+      payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, T>>
    ): Promise<Return<ExtractByTypeArgument<OutgoingMessage, T>>> {
       return await new Promise<
          Return<ExtractByTypeArgument<OutgoingMessage, T>>

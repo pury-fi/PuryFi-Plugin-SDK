@@ -263,8 +263,6 @@ export type OutgoingMessageObject = {
  * ====================================================================
  */
 
-// TODO: Implement intents
-
 export const Intents = [
    "readEnabled",
    "writeEnabled",
