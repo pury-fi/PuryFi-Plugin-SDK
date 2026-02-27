@@ -53,10 +53,8 @@ export class PuryFiConnection {
    private debug: boolean = false;
 
    /**
-    * Create a new PuryFi SDK instance.
-    * @param upstream The upstream connection (WebSocket/Port)
-    * @param manifest Plugin manifest
-    * @param configuration Custom configuration fields to display in the PuryFi UI
+    * Creates a new connection to PuryFi.
+    * @param upstream The upstream connection
     */
    constructor(public upstream: PuryFiUpstream) {
       upstream.on("message", (data) => this.handleMessage(data));
@@ -65,6 +63,20 @@ export class PuryFiConnection {
       upstream.on("close", () => this.handleClose());
    }
 
+   /**
+    * Enables or disables debug logging.
+    * @param enabled Whether to enable or disable debug logging
+    */
+   setDebug(enabled: boolean) {
+      this.debug = enabled;
+   }
+
+   /**
+    * Registers an event listener. In case of listening for message events, you might optionally specify a message type to only listen for.
+    * @param event The event type to listen for
+    * @param type The message type to optionally only listen for in case of listening for message events
+    * @param listener The callback to register
+    */
    on<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
@@ -102,6 +114,12 @@ export class PuryFiConnection {
       }
    }
 
+   /**
+    * Registers a one-time event listener. In case of listening for message events, you might optionally specify a message type to only listen for.
+    * @param event The event type to listen for
+    * @param type The message type to optionally only listen for in case of listening for message events
+    * @param listener The callback to register
+    */
    once<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
@@ -139,6 +157,12 @@ export class PuryFiConnection {
       }
    }
 
+   /**
+    * Unregisters an event listener. In case of listening for message events, you might optionally specify a message type to only stop listening for.
+    * @param event The event type to stop listening for
+    * @param type The message type to optionally only stop listening for in case of listening for message events
+    * @param listener The callback to unregister
+    */
    off<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
@@ -171,41 +195,11 @@ export class PuryFiConnection {
       }
    }
 
-   private emit<K extends keyof Events>(
-      event: K,
-      ...args: Parameters<Events[K]>
-   ): void {
-      this.onceListeners[event]?.forEach((listener) => {
-         // @ts-ignore
-         listener(...args);
-      });
-      delete this.onceListeners[event];
-      this.listeners[event]?.forEach((listener) =>
-         // @ts-ignore
-         listener(...args)
-      );
-   }
-
-   private emitMessage(message: IncomingMessageObject): void {
-      this.emit("message", message);
-      this.onceMessageListeners[message.type]?.forEach((listener) =>
-         // @ts-ignore
-         listener(message.payload)
-      );
-      delete this.onceMessageListeners[message.type];
-      this.messageListeners[message.type]?.forEach((listener) =>
-         // @ts-ignore
-         listener(message.payload)
-      );
-   }
-
    /**
-    *
-    * @param type The type of message to be sent to PuryFi
-    * @param payload The message payload for the specific message type
-    * @param transfer Binary transferable
-    * @returns
-    * @throws PuryFiError
+    * Sends a message.
+    * @param type The message type to send
+    * @param payload The message payload corresponding to the message type to send
+    * @returns A promise that resolves with the response, or rejects with an error
     */
    async sendMessage<T extends "getState", P extends ReadOnlyPath>(
       type: T,
@@ -240,12 +234,32 @@ export class PuryFiConnection {
       });
    }
 
-   /**
-    * Enable or disable debug logging.
-    * @param enabled debug state
-    */
-   setDebug(enabled: boolean) {
-      this.debug = enabled;
+   private emit<K extends keyof Events>(
+      event: K,
+      ...args: Parameters<Events[K]>
+   ): void {
+      this.onceListeners[event]?.forEach((listener) => {
+         // @ts-ignore
+         listener(...args);
+      });
+      delete this.onceListeners[event];
+      this.listeners[event]?.forEach((listener) =>
+         // @ts-ignore
+         listener(...args)
+      );
+   }
+
+   private emitMessage(message: IncomingMessageObject): void {
+      this.emit("message", message);
+      this.onceMessageListeners[message.type]?.forEach((listener) =>
+         // @ts-ignore
+         listener(message.payload)
+      );
+      delete this.onceMessageListeners[message.type];
+      this.messageListeners[message.type]?.forEach((listener) =>
+         // @ts-ignore
+         listener(message.payload)
+      );
    }
 
    private log(...args: any[]) {
@@ -254,10 +268,6 @@ export class PuryFiConnection {
       }
    }
 
-   /**
-    * Handle incoming message from upstream connection.
-    * @param payload The raw payload data
-    */
    private handleMessage(payload: any) {
       // TODO: Catch errors here
 
@@ -314,15 +324,16 @@ export class PuryFiConnection {
    }
 
    /**
-    * Handle upstream connection open event.
+    * Handles an upstream connection open event.
+    * @param event The open event
     */
-   private handleOpen(e: OpenEvent) {
+   private handleOpen(event: OpenEvent) {
       this.log("Upstream connection open");
-      this.emit("open", e);
+      this.emit("open", event);
    }
 
    /**
-    * Handle upstream connection close event.
+    * Handles an upstream connection close event.
     */
    private handleClose() {
       this.log("Upstream connection closed");
@@ -330,8 +341,8 @@ export class PuryFiConnection {
    }
 
    /**
-    * Handle error event from upstream connection.
-    * @param error Error message
+    * Handles an error event from upstream connection.
+    * @param error The error
     */
    private handleError(error: PuryFiConnectionError) {
       this.log("Upstream connection error:", error);
