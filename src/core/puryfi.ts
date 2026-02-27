@@ -12,10 +12,15 @@ import { PuryFiUpstream } from "./upstream.js";
 import { isNumber, isObject, isUndefined } from "./type-util.js";
 import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
 
+export type OpenEvent = {
+   version: string;
+   apiVersion: string;
+};
+
 type Events = {
    message: (message: IncomingMessageObject) => void;
    error: (error: PuryFiConnectionError) => void;
-   open: () => void;
+   open: (event: OpenEvent) => void;
    close: () => void;
 };
 
@@ -56,7 +61,7 @@ export class PuryFiConnection {
    constructor(public upstream: PuryFiUpstream) {
       upstream.on("message", (data) => this.handleMessage(data));
       upstream.on("error", (error) => this.handleError(error));
-      upstream.on("open", () => this.handleOpen());
+      upstream.on("open", (e) => this.handleOpen(e));
       upstream.on("close", () => this.handleClose());
    }
 
@@ -311,9 +316,9 @@ export class PuryFiConnection {
    /**
     * Handle upstream connection open event.
     */
-   private handleOpen() {
+   private handleOpen(e: OpenEvent) {
       this.log("Upstream connection open");
-      this.emit("open");
+      this.emit("open", e);
    }
 
    /**

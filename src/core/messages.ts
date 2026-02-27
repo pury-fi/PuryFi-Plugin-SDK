@@ -44,12 +44,7 @@ type AnystateChangePayload = {
  * Messages sent by the extension to plugins
  */
 namespace IncomingMessages {
-   export type Ready = (
-      type: "ready",
-      payload: {
-         version: string;
-      }
-   ) => void;
+   export type Ready = (type: "ready", payload: {}) => void;
 
    export type ConfigurationChange = (
       type: "configurationChange",
@@ -220,9 +215,7 @@ namespace OutgoingMessages {
 
    export type EnterLockPassword = (
       type: "enterLockPassword",
-      payload: {
-         secret: string;
-      }
+      payload: { secret: string }
    ) => {};
 
    export type EnterLockEmergencyServerToken = (

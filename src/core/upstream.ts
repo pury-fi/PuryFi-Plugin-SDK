@@ -1,11 +1,48 @@
 import { PuryFiConnectionError } from ".";
 
+export type UpstreamOpenEvent = {
+   version: string;
+   apiVersion: string;
+};
+
 export type UpstreamEvents = {
    error: (error: PuryFiConnectionError) => void;
    message: (event: ArrayBuffer) => void;
-   open: () => void;
+   open: (event: UpstreamOpenEvent) => void;
    close: () => void;
 };
+
+export const VERSION_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
+export const API_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+export const MIN_API_VERSION = [1, 0, 0] as const;
+export const MAX_API_VERSION = [2, 0, 0] as const;
+
+export function parseVersion(value: string, parts: number): number[] | null {
+   const segments = value.split(".");
+   if (segments.length !== parts) {
+      return null;
+   }
+
+   const parsed = segments.map((segment) => Number(segment));
+   return parsed.every((entry) => Number.isInteger(entry) && entry >= 0)
+      ? parsed
+      : null;
+}
+
+export function compareVersions(
+   a: readonly number[],
+   b: readonly number[]
+): number {
+   const maxLength = Math.max(a.length, b.length);
+   for (let index = 0; index < maxLength; index++) {
+      const left = a[index] ?? 0;
+      const right = b[index] ?? 0;
+      if (left > right) return 1;
+      if (left < right) return -1;
+   }
+
+   return 0;
+}
 
 export abstract class PuryFiUpstream {
    private debug: boolean = false;

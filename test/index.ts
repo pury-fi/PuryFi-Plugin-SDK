@@ -7,7 +7,7 @@ import {
 } from "@puryfi/puryfi-plugin-sdk";
 import { Intent } from "../dist/esm/core/messages";
 
-const upstreamConnection = new PuryFiSocket(8085);
+const upstreamConnection = new PuryFiSocket(8080);
 upstreamConnection.setDebug(true);
 const connection = new PuryFiConnection(upstreamConnection);
 connection.setDebug(true);
@@ -34,11 +34,11 @@ connection.on("error", (error: PuryFiConnectionError) => {
    console.log(error.message);
 });
 
-connection.once("open", async () => {
-   console.log("Connected to PuryFi");
+connection.once("open", async ({ version, apiVersion }) => {
+   console.log(`Connected to PuryFi ${version} with Plugins API ${apiVersion}`);
 
-   connection.once("message", "ready", async ({ version }) => {
-      console.log(`Connected PuryFi ${version} is ready to receive messages`);
+   connection.once("message", "ready", async () => {
+      console.log("Connected PuryFi is ready to receive messages");
 
       await connection.sendMessage("setManifest", { manifest });
 
@@ -56,8 +56,8 @@ connection.once("open", async () => {
                async function listener({ intents }) {
                   console.log("Received intentsGrant message", intents);
                   if (
-                     response.intents.every((intent) =>
-                        intents.includes(intent)
+                     intents.every((intent) =>
+                        response.intents.includes(intent)
                      )
                   ) {
                      console.log("Required intents granted");

@@ -1,8 +1,66 @@
 import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
-import { PuryFiUpstream } from "../core/upstream.js";
+import {
+   API_VERSION_PATTERN,
+   compareVersions,
+   MAX_API_VERSION,
+   MIN_API_VERSION,
+   parseVersion,
+   PuryFiUpstream,
+   VERSION_PATTERN,
+} from "../core/upstream.js";
 import { PuryFiConnectionError } from "../core/index.js";
 
 // TODO: Handle multiple clients attempting to connect
+
+// TODO: Implement receiving and validating a version and API version from the browser upstream as well
+
+function validateHandshakeQuery(params: URLSearchParams): {
+   valid: boolean;
+   statusCode?: number;
+   reason?: string;
+} {
+   const version = params.get("version");
+   if (version == null || !VERSION_PATTERN.test(version)) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "Missing or invalid 'version'",
+      };
+   }
+
+   const apiVersion = params.get("api_version");
+   if (apiVersion == null || !API_VERSION_PATTERN.test(apiVersion)) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "Missing or invalid 'api_version'",
+      };
+   }
+
+   const parsedApiVersion = parseVersion(apiVersion, 3);
+   if (parsedApiVersion == null) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "Missing or invalid 'api_version'",
+      };
+   }
+
+   if (
+      compareVersions(parsedApiVersion, MIN_API_VERSION) < 0 ||
+      0 <= compareVersions(parsedApiVersion, MAX_API_VERSION)
+   ) {
+      return {
+         valid: false,
+         statusCode: 426,
+         reason: `Unsupported 'api_version'. Supported range is ${MIN_API_VERSION.join(
+            "."
+         )} to ${MAX_API_VERSION.join(".")}`,
+      };
+   }
+
+   return { valid: true };
+}
 
 export default class PuryFiSocket extends PuryFiUpstream {
    private socketServer: WebSocketServer;
@@ -22,7 +80,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
    }
 
    constructor(
-      port: number = 8080,
+      port: number,
       options: {
          maxPayload?: number | undefined;
          perMessageDeflate?: boolean | PerMessageDeflateOptions | undefined;
@@ -35,7 +93,41 @@ export default class PuryFiSocket extends PuryFiUpstream {
       };
 
       super();
-      this.socketServer = new WebSocketServer({ port, ...options });
+      this.socketServer = new WebSocketServer({
+         port,
+         ...options,
+         verifyClient: (info, done) => {
+            try {
+               const requestUrl = new URL(
+                  info.req.url ?? "/",
+                  `ws://localhost:${port}`
+               );
+               const result = validateHandshakeQuery(requestUrl.searchParams);
+               if (!result.valid) {
+                  this.log(
+                     "Rejected client during handshake on port",
+                     port,
+                     result.reason
+                  );
+                  done(false, result.statusCode, result.reason);
+                  return;
+               }
+
+               done(true);
+            } catch (err) {
+               const message =
+                  err instanceof Error
+                     ? err.message
+                     : "Invalid connection request";
+               this.log(
+                  "Rejected client during handshake on port",
+                  port,
+                  message
+               );
+               done(false, 400, message);
+            }
+         },
+      });
       this.socketServer.on("listening", () => {
          this.log("PuryFiSocket listening on port", port);
       });
@@ -46,8 +138,15 @@ export default class PuryFiSocket extends PuryFiUpstream {
             new PuryFiConnectionError("SocketError", err.message)
          );
       });
-      this.socketServer.on("connection", (ws: WebSocket) => {
+      this.socketServer.on("connection", (ws: WebSocket, request) => {
          this.log("New client connected to PuryFiSocket on port", port);
+
+         const requestUrl = new URL(
+            request.url ?? "/",
+            `ws://localhost:${port}`
+         );
+         const version = requestUrl.searchParams.get("version")!;
+         const apiVersion = requestUrl.searchParams.get("api_version")!;
 
          ws.binaryType = "arraybuffer";
          this.clients.push(ws);
@@ -73,7 +172,10 @@ export default class PuryFiSocket extends PuryFiUpstream {
             );
          });
 
-         this.emit("open");
+         this.emit("open", {
+            version,
+            apiVersion,
+         });
       });
    }
 }
