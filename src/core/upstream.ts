@@ -12,10 +12,10 @@ export type UpstreamEvents = {
    close: () => void;
 };
 
-export const VERSION_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
-export const API_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-export const MIN_API_VERSION = [1, 0, 0] as const;
-export const MAX_API_VERSION = [2, 0, 0] as const;
+export const versionReg = /^\d+\.\d+\.\d+\.\d+$/;
+export const apiVersionReg = /^\d+\.\d+\.\d+$/;
+export const minAPIVersion = [1, 0, 0] as const;
+export const maxAPIVersion = [2, 0, 0] as const;
 
 export function parseVersion(value: string, parts: number): number[] | null {
    const segments = value.split(".");

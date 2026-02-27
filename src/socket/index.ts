@@ -1,12 +1,12 @@
 import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
 import {
-   API_VERSION_PATTERN,
+   apiVersionReg,
    compareVersions,
-   MAX_API_VERSION,
-   MIN_API_VERSION,
+   maxAPIVersion,
+   minAPIVersion,
    parseVersion,
    PuryFiUpstream,
-   VERSION_PATTERN,
+   versionReg,
 } from "../core/upstream.js";
 import { PuryFiConnectionError } from "../core/index.js";
 
@@ -20,20 +20,20 @@ function validateHandshakeQuery(params: URLSearchParams): {
    reason?: string;
 } {
    const version = params.get("version");
-   if (version == null || !VERSION_PATTERN.test(version)) {
+   if (version == null || !versionReg.test(version)) {
       return {
          valid: false,
          statusCode: 400,
-         reason: "Missing or invalid 'version'",
+         reason: "invalidVersion: Missing or invalid 'version' parameter",
       };
    }
 
-   const apiVersion = params.get("api_version");
-   if (apiVersion == null || !API_VERSION_PATTERN.test(apiVersion)) {
+   const apiVersion = params.get("apiVersion");
+   if (apiVersion == null || !apiVersionReg.test(apiVersion)) {
       return {
          valid: false,
          statusCode: 400,
-         reason: "Missing or invalid 'api_version'",
+         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
       };
    }
 
@@ -42,20 +42,20 @@ function validateHandshakeQuery(params: URLSearchParams): {
       return {
          valid: false,
          statusCode: 400,
-         reason: "Missing or invalid 'api_version'",
+         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
       };
    }
 
    if (
-      compareVersions(parsedApiVersion, MIN_API_VERSION) < 0 ||
-      0 <= compareVersions(parsedApiVersion, MAX_API_VERSION)
+      compareVersions(parsedApiVersion, minAPIVersion) < 0 ||
+      0 <= compareVersions(parsedApiVersion, maxAPIVersion)
    ) {
       return {
          valid: false,
          statusCode: 426,
-         reason: `Unsupported 'api_version'. Supported range is ${MIN_API_VERSION.join(
+         reason: `unsupportedAPIVersion: Unsupported API version. Supported range is '${minAPIVersion.join(
             "."
-         )} to ${MAX_API_VERSION.join(".")}`,
+         )}' to '${maxAPIVersion.join(".")}'`,
       };
    }
 
@@ -146,7 +146,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
             `ws://localhost:${port}`
          );
          const version = requestUrl.searchParams.get("version")!;
-         const apiVersion = requestUrl.searchParams.get("api_version")!;
+         const apiVersion = requestUrl.searchParams.get("apiVersion")!;
 
          ws.binaryType = "arraybuffer";
          this.clients.push(ws);
