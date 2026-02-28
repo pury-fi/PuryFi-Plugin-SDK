@@ -1,6 +1,12 @@
 let peerPort = null;
 const bc = new BroadcastChannel('puryfi-binary-bus');
 
+let params = new URLSearchParams(window.location.search);
+bc.postMessage({
+      type: 'OPEN',
+      data: params.get('version') + '|' + params.get('apiVersion'),
+    });
+
 window.addEventListener('message', (e) => {
   if (!e.data || e.data.type !== 'INIT_PORT') return;
 
@@ -27,14 +33,12 @@ bc.onmessage = (e) => {
   if (!msg) return;
 
   if (msg.type === 'OPEN') {
-    let params = new URLSearchParams(window.location.search);
     bc.postMessage({
       type: 'OPEN',
       data: params.get('version') + '|' + params.get('apiVersion'),
     });
   } else if (msg.type === 'SEND_TO_PURYFI') {
     if (!peerPort) return;
-    console.log('[bridge] SEND_TO_PURYFI', msg);
     const ab = msg.data;
     if (!(ab instanceof ArrayBuffer)) {
       console.warn('[bridge] SEND_TO_PURYFI ab not ArrayBuffer:', ab);
@@ -44,8 +48,9 @@ bc.onmessage = (e) => {
     peerPort.postMessage(ab, [ab]);
   } else {
     if (msg.type === 'CLOSE') {
-      peerPort.close();
-      peerPort = null;
+      if(peerPort !== null) {
+         peerPort.postMessage("CLOSE");
+      }
     }
   }
 };

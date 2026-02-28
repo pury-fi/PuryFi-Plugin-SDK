@@ -24,6 +24,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
       super();
       if (isChromiumExtension()) {
          this.upstream = new BroadcastChannel("puryfi-binary-bus");
+         this.upstream?.postMessage({ type: "CLOSE" });
          let initialized = false;
          let intervalId = setInterval(() => {
             if (!initialized) {
