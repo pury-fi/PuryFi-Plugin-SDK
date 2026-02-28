@@ -1,49 +1,108 @@
 import { PuryFiConnectionError } from "../core/puryfi.js";
-import { PuryFiUpstream } from "../core/upstream.js";
+import { PuryFiUpstream, validateHandshakeQuery } from "../core/upstream.js";
 
 export const extension = globalThis.browser ?? globalThis.chrome;
 
 interface BroadcastMessage {
-   type: "SEND_TO_PURYFI" | "MESSAGE_FROM_PURYFI" | "CLOSE" | "ERROR";
+   type:
+      | "SEND_TO_PURYFI"
+      | "MESSAGE_FROM_PURYFI"
+      | "CLOSE"
+      | "ERROR"
+      | "OPEN";
    data: ArrayBuffer | string;
 }
 
-export function isChromiumExtension(): boolean {
+function isChromiumExtension(): boolean {
    return chrome.runtime.getManifest().manifest_version === 3;
 }
 
-export class PuryFiBrowser extends PuryFiUpstream {
-   private upstream: BroadcastChannel | browser.runtime.Port;
+export default class PuryFiBrowser extends PuryFiUpstream {
+   private upstream: BroadcastChannel | browser.runtime.Port | null = null;
 
-   constructor(channelName: string = "puryfi-binary-bus") {
+   constructor() {
       super();
       if (isChromiumExtension()) {
-         this.upstream = new BroadcastChannel(channelName);
-
+         this.upstream = new BroadcastChannel("puryfi-binary-bus");
+         let initialized = false;
+         let intervalId = setInterval(() => {
+            if (!initialized) {
+               this.log("Posting OPEN message to BroadcastChannel");
+               this.upstream?.postMessage({ type: "OPEN" });
+            } else {
+               this.log("Connection initialized, clearing OPEN message interval");
+               clearInterval(intervalId);
+            }
+         }, 1000);
          this.upstream.onmessage = (event) => {
             let data = event.data as BroadcastMessage;
-            if (data.type === "MESSAGE_FROM_PURYFI") {
-               this.emit("message", data.data as ArrayBuffer);
-            } else if (data.type === "CLOSE") {
-               this.emit("close");
-            } else if (data.type === "ERROR") {
-               this.emit(
-                  "error",
-                  new PuryFiConnectionError("SocketError", data.data as string)
-               );
+            if (!initialized) {
+               if (data.type === "OPEN") {
+                  const payload = data.data as string;
+                  const [version, apiVersion] = payload.split("|");
+                  const result = validateHandshakeQuery(version, apiVersion);
+                  if (!result.valid) {
+                     this.log(
+                        "Rejected client during handshake on BroadcastChannel",
+                        result.reason
+                     );
+                     return;
+                  }
+                  initialized = true;
+                  this.emit("open", {
+                     version,
+                     apiVersion,
+                  });
+               }
+            } else {
+               if (data.type === "MESSAGE_FROM_PURYFI") {
+                  this.emit("message", data.data as ArrayBuffer);
+               } else if (data.type === "CLOSE") {
+                  this.emit("close");
+               } else if (data.type === "ERROR") {
+                  this.emit(
+                     "error",
+                     new PuryFiConnectionError(
+                        "SocketError",
+                        data.data as string
+                     )
+                  );
+               }
             }
          };
-         this.emit("open");
       } else {
-         this.upstream = extension.runtime.connect({ name: channelName });
-         this.upstream.onMessage.addListener((message) => {
-            let tmpRaw = message as Record<string, unknown>;
-            if (tmpRaw.data instanceof ArrayBuffer) {
-               this.emit("message", tmpRaw.data);
+         extension.runtime.onConnect.addListener((port) => {
+            if (port.name.startsWith("puryfi-plugin-initiator")) {
+               let version = port.name.split("/")[1];
+               let apiVersion = port.name.split("/")[2];
+
+               const result = validateHandshakeQuery(version, apiVersion);
+               if (!result.valid) {
+                  this.log(
+                     "Rejected client during handshake on port",
+                     port,
+                     result.reason
+                  );
+                  port.disconnect();
+                  return;
+               }
+
+               this.upstream = port;
+               this.upstream.onMessage.addListener((message) => {
+                  let tmpRaw = message as Record<string, unknown>;
+                  if (tmpRaw.data instanceof ArrayBuffer) {
+                     this.emit("message", tmpRaw.data);
+                  }
+               });
+               this.upstream.onDisconnect.addListener(() => {
+                  this.emit("close");
+               });
+
+               this.emit("open", {
+                  version,
+                  apiVersion,
+               });
             }
-         });
-         this.upstream.onDisconnect.addListener(() => {
-            this.emit("close");
          });
       }
    }
@@ -52,8 +111,13 @@ export class PuryFiBrowser extends PuryFiUpstream {
       try {
          if (this.upstream instanceof BroadcastChannel) {
             this.upstream.postMessage({ type: "SEND_TO_PURYFI", data });
-         } else {
+         } else if (this.upstream) {
             this.upstream.postMessage({ data });
+         } else {
+            throw new PuryFiConnectionError(
+               "SocketError",
+               "No upstream connection available"
+            );
          }
       } catch (error) {
          if (error instanceof DOMException) {

@@ -1,12 +1,7 @@
 import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
 import {
-   apiVersionReg,
-   compareVersions,
-   maxAPIVersion,
-   minAPIVersion,
-   parseVersion,
    PuryFiUpstream,
-   versionReg,
+   validateHandshakeQuery,
 } from "../core/upstream.js";
 import { PuryFiConnectionError } from "../core/index.js";
 
@@ -14,53 +9,7 @@ import { PuryFiConnectionError } from "../core/index.js";
 
 // TODO: Implement receiving and validating a version and API version from the browser upstream as well
 
-function validateHandshakeQuery(params: URLSearchParams): {
-   valid: boolean;
-   statusCode?: number;
-   reason?: string;
-} {
-   const version = params.get("version");
-   if (version == null || !versionReg.test(version)) {
-      return {
-         valid: false,
-         statusCode: 400,
-         reason: "invalidVersion: Missing or invalid 'version' parameter",
-      };
-   }
 
-   const apiVersion = params.get("apiVersion");
-   if (apiVersion == null || !apiVersionReg.test(apiVersion)) {
-      return {
-         valid: false,
-         statusCode: 400,
-         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
-      };
-   }
-
-   const parsedApiVersion = parseVersion(apiVersion, 3);
-   if (parsedApiVersion == null) {
-      return {
-         valid: false,
-         statusCode: 400,
-         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
-      };
-   }
-
-   if (
-      compareVersions(parsedApiVersion, minAPIVersion) < 0 ||
-      0 <= compareVersions(parsedApiVersion, maxAPIVersion)
-   ) {
-      return {
-         valid: false,
-         statusCode: 426,
-         reason: `unsupportedAPIVersion: Unsupported API version. Supported range is '${minAPIVersion.join(
-            "."
-         )}' to '${maxAPIVersion.join(".")}'`,
-      };
-   }
-
-   return { valid: true };
-}
 
 export default class PuryFiSocket extends PuryFiUpstream {
    private socketServer: WebSocketServer;
@@ -102,7 +51,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
                   info.req.url ?? "/",
                   `ws://localhost:${port}`
                );
-               const result = validateHandshakeQuery(requestUrl.searchParams);
+               const result = validateHandshakeQuery(requestUrl.searchParams.get("version")!, requestUrl.searchParams.get("apiVersion")!);
                if (!result.valid) {
                   this.log(
                      "Rejected client during handshake on port",

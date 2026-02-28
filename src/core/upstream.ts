@@ -120,3 +120,49 @@ export abstract class PuryFiUpstream {
       }
    }
 }
+
+export function validateHandshakeQuery(version: string, apiVersion: string): {
+   valid: boolean;
+   statusCode?: number;
+   reason?: string;
+} {
+   if (version == null || !versionReg.test(version)) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "invalidVersion: Missing or invalid 'version' parameter",
+      };
+   }
+
+   if (apiVersion == null || !apiVersionReg.test(apiVersion)) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
+      };
+   }
+
+   const parsedApiVersion = parseVersion(apiVersion, 3);
+   if (parsedApiVersion == null) {
+      return {
+         valid: false,
+         statusCode: 400,
+         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
+      };
+   }
+
+   if (
+      compareVersions(parsedApiVersion, minAPIVersion) < 0 ||
+      0 <= compareVersions(parsedApiVersion, maxAPIVersion)
+   ) {
+      return {
+         valid: false,
+         statusCode: 426,
+         reason: `unsupportedAPIVersion: Unsupported API version. Supported range is '${minAPIVersion.join(
+            "."
+         )}' to '${maxAPIVersion.join(".")}'`,
+      };
+   }
+
+   return { valid: true };
+}

@@ -34,8 +34,8 @@ bc.onmessage = (e) => {
     });
   } else if (msg.type === 'SEND_TO_PURYFI') {
     if (!peerPort) return;
-
-    const ab = msg.ab;
+    console.log('[bridge] SEND_TO_PURYFI', msg);
+    const ab = msg.data;
     if (!(ab instanceof ArrayBuffer)) {
       console.warn('[bridge] SEND_TO_PURYFI ab not ArrayBuffer:', ab);
       return;
