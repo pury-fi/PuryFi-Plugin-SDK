@@ -1,15 +1,13 @@
 import { PuryFiConnectionError } from "../core/puryfi.js";
-import { PuryFiUpstream, validateHandshakeQuery } from "../core/upstream.js";
+import {
+   PuryFiUpstream,
+   validateHandshakeParameters,
+} from "../core/upstream.js";
 
 export const extension = globalThis.browser ?? globalThis.chrome;
 
 interface BroadcastMessage {
-   type:
-      | "SEND_TO_PURYFI"
-      | "MESSAGE_FROM_PURYFI"
-      | "CLOSE"
-      | "ERROR"
-      | "OPEN";
+   type: "SEND_TO_PURYFI" | "MESSAGE_FROM_PURYFI" | "CLOSE" | "ERROR" | "OPEN";
    data: ArrayBuffer | string;
 }
 
@@ -31,7 +29,9 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                this.log("Posting OPEN message to BroadcastChannel");
                this.upstream?.postMessage({ type: "OPEN" });
             } else {
-               this.log("Connection initialized, clearing OPEN message interval");
+               this.log(
+                  "Connection initialized, clearing OPEN message interval"
+               );
                clearInterval(intervalId);
             }
          }, 1000);
@@ -41,8 +41,11 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                if (data.type === "OPEN") {
                   const payload = data.data as string;
                   const [version, apiVersion] = payload.split("|");
-                  const result = validateHandshakeQuery(version, apiVersion);
-                  if (!result.valid) {
+                  const result = validateHandshakeParameters(
+                     version,
+                     apiVersion
+                  );
+                  if (!result.success) {
                      this.log(
                         "Rejected client during handshake on BroadcastChannel",
                         result.reason
@@ -77,8 +80,8 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                let version = port.name.split("/")[1];
                let apiVersion = port.name.split("/")[2];
 
-               const result = validateHandshakeQuery(version, apiVersion);
-               if (!result.valid) {
+               const result = validateHandshakeParameters(version, apiVersion);
+               if (!result.success) {
                   this.log(
                      "Rejected client during handshake on port",
                      port,

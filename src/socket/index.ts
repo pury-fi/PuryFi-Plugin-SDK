@@ -1,15 +1,13 @@
 import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
 import {
    PuryFiUpstream,
-   validateHandshakeQuery,
+   validateHandshakeParameters,
 } from "../core/upstream.js";
 import { PuryFiConnectionError } from "../core/index.js";
 
 // TODO: Handle multiple clients attempting to connect
 
 // TODO: Implement receiving and validating a version and API version from the browser upstream as well
-
-
 
 export default class PuryFiSocket extends PuryFiUpstream {
    private socketServer: WebSocketServer;
@@ -45,37 +43,6 @@ export default class PuryFiSocket extends PuryFiUpstream {
       this.socketServer = new WebSocketServer({
          port,
          ...options,
-         verifyClient: (info, done) => {
-            try {
-               const requestUrl = new URL(
-                  info.req.url ?? "/",
-                  `ws://localhost:${port}`
-               );
-               const result = validateHandshakeQuery(requestUrl.searchParams.get("version")!, requestUrl.searchParams.get("apiVersion")!);
-               if (!result.valid) {
-                  this.log(
-                     "Rejected client during handshake on port",
-                     port,
-                     result.reason
-                  );
-                  done(false, result.statusCode, result.reason);
-                  return;
-               }
-
-               done(true);
-            } catch (err) {
-               const message =
-                  err instanceof Error
-                     ? err.message
-                     : "Invalid connection request";
-               this.log(
-                  "Rejected client during handshake on port",
-                  port,
-                  message
-               );
-               done(false, 400, message);
-            }
-         },
       });
       this.socketServer.on("listening", () => {
          this.log("PuryFiSocket listening on port", port);
@@ -94,8 +61,31 @@ export default class PuryFiSocket extends PuryFiUpstream {
             request.url ?? "/",
             `ws://localhost:${port}`
          );
-         const version = requestUrl.searchParams.get("version")!;
-         const apiVersion = requestUrl.searchParams.get("apiVersion")!;
+         const version = requestUrl.searchParams.get("version");
+         const apiVersion = requestUrl.searchParams.get("apiVersion");
+
+         try {
+            const result = validateHandshakeParameters(version, apiVersion);
+            if (!result.success) {
+               this.log(
+                  "Rejected new client during handshake on port",
+                  port,
+                  result.reason
+               );
+               ws.close(4000, result.reason);
+               return;
+            }
+         } catch (e) {
+            const reason =
+               "internalError: An internal error occurred while validating the version and API version";
+            this.log(
+               "Rejected new client during handshake on port",
+               port,
+               reason
+            );
+            ws.close(4000, reason);
+            return;
+         }
 
          ws.binaryType = "arraybuffer";
          this.clients.push(ws);
@@ -122,8 +112,8 @@ export default class PuryFiSocket extends PuryFiUpstream {
          });
 
          this.emit("open", {
-            version,
-            apiVersion,
+            version: version!,
+            apiVersion: apiVersion!,
          });
       });
    }

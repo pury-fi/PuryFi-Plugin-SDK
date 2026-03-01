@@ -121,23 +121,31 @@ export abstract class PuryFiUpstream {
    }
 }
 
-export function validateHandshakeQuery(version: string, apiVersion: string): {
-   valid: boolean;
-   statusCode?: number;
+export function isVersion(value: unknown): value is string {
+   return typeof value === "string" && versionReg.test(value);
+}
+
+export function isAPIVersion(value: unknown): value is string {
+   return typeof value === "string" && apiVersionReg.test(value);
+}
+
+export function validateHandshakeParameters(
+   version: unknown,
+   apiVersion: unknown
+): {
+   success: boolean;
    reason?: string;
 } {
-   if (version == null || !versionReg.test(version)) {
+   if (!isVersion(version)) {
       return {
-         valid: false,
-         statusCode: 400,
+         success: false,
          reason: "invalidVersion: Missing or invalid 'version' parameter",
       };
    }
 
-   if (apiVersion == null || !apiVersionReg.test(apiVersion)) {
+   if (!isAPIVersion(apiVersion)) {
       return {
-         valid: false,
-         statusCode: 400,
+         success: false,
          reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
       };
    }
@@ -145,8 +153,7 @@ export function validateHandshakeQuery(version: string, apiVersion: string): {
    const parsedApiVersion = parseVersion(apiVersion, 3);
    if (parsedApiVersion == null) {
       return {
-         valid: false,
-         statusCode: 400,
+         success: false,
          reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
       };
    }
@@ -156,13 +163,12 @@ export function validateHandshakeQuery(version: string, apiVersion: string): {
       0 <= compareVersions(parsedApiVersion, maxAPIVersion)
    ) {
       return {
-         valid: false,
-         statusCode: 426,
+         success: false,
          reason: `unsupportedAPIVersion: Unsupported API version. Supported range is '${minAPIVersion.join(
             "."
          )}' to '${maxAPIVersion.join(".")}'`,
       };
    }
 
-   return { valid: true };
+   return { success: true };
 }
