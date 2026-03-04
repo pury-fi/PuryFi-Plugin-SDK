@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@puryfi/puryfi-plugin-sdk": "file:.."
+    "@puryfi/puryfi-plugin-sdk": "file:../../"
   },
   "devDependencies": {
     "ts-node": "^10.9.2"
