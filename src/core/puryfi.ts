@@ -8,23 +8,33 @@ import {
    Return,
    TypeArgument,
 } from "./messages.js";
-import { PuryFiUpstream } from "./upstream.js";
+import {
+   compareVersions,
+   maxApiVersion,
+   minApiVersion,
+   parseVersion,
+   PuryFiUpstream,
+} from "./upstream.js";
 import { isNumber, isObject, isUndefined } from "./type-util.js";
 import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
-
-export type OpenEvent = {
-   version: string;
-   apiVersion: string;
-};
+import ws from "ws";
 
 type Events = {
-   message: (message: IncomingMessageObject) => void;
+   // TODO: Narrow argument types and test it
+   message: (
+      type: TypeArgument<IncomingMessage>,
+      payload: PayloadArgument<IncomingMessage>,
+      currentResponse: any
+   ) => any;
    error: (error: PuryFiConnectionError) => void;
-   open: (event: OpenEvent) => void;
+   open: () => void;
    close: () => void;
 };
 
-export type Listener<T> = (payload: PayloadArgument<T>) => Promise<Return<T>>;
+export type Listener<T> = (
+   payload: PayloadArgument<T>,
+   currentResponse: undefined | Return<T>
+) => Return<T> | Promise<Return<T>>;
 
 export class PuryFiConnection {
    private messageListeners: {
@@ -59,7 +69,7 @@ export class PuryFiConnection {
    constructor(public upstream: PuryFiUpstream) {
       upstream.on("message", (data) => this.handleMessage(data));
       upstream.on("error", (error) => this.handleError(error));
-      upstream.on("open", (e) => this.handleOpen(e));
+      upstream.on("open", () => this.handleOpen());
       upstream.on("close", () => this.handleClose());
    }
 
@@ -221,27 +231,37 @@ export class PuryFiConnection {
          const responseId = this.nextResponseId;
          this.nextResponseId++;
 
-         const encodedMessage = encode({ type, payload, responseId });
-
-         const encodedMessageSlice = encodedMessage.buffer.slice(
-            encodedMessage.byteOffset,
-            encodedMessage.byteOffset + encodedMessage.byteLength
-         );
-
-         this.upstream.send(encodedMessageSlice);
+         const encodedMessage = this.upstream.encodeMessage({
+            type,
+            payload,
+            responseId,
+         });
+         this.upstream.send(encodedMessage);
 
          this.responseListeners[responseId] = [resolve, reject];
       });
    }
 
-   private emit<K extends keyof Events>(
+   handleIncomingReadyMessage(
+      payload: PayloadArgument<ExtractByTypeArgument<IncomingMessage, "ready">>
+   ) {
+      const parsedApiVersion = parseVersion(payload.apiVersion, 3)!;
+      if (
+         compareVersions(parsedApiVersion, minApiVersion) < 0 ||
+         0 <= compareVersions(parsedApiVersion, maxApiVersion)
+      ) {
+         throw new IncompatibleAPIVersionError();
+      }
+   }
+
+   private emit<K extends keyof Exclude<Events, "message">>(
       event: K,
       ...args: Parameters<Events[K]>
-   ): void {
-      this.onceListeners[event]?.forEach((listener) => {
+   ): undefined {
+      this.onceListeners[event]?.forEach((listener) =>
          // @ts-ignore
-         listener(...args);
-      });
+         listener(...args)
+      );
       delete this.onceListeners[event];
       this.listeners[event]?.forEach((listener) =>
          // @ts-ignore
@@ -249,17 +269,42 @@ export class PuryFiConnection {
       );
    }
 
-   private emitMessage(message: IncomingMessageObject): void {
-      this.emit("message", message);
-      this.onceMessageListeners[message.type]?.forEach((listener) =>
-         // @ts-ignore
-         listener(message.payload)
+   // TODO: Narrow return type
+   private emitMessage(message: IncomingMessageObject): any {
+      let currentResponse: any = undefined;
+      this.onceMessageListeners[message.type]?.forEach(
+         (listener) =>
+            // @ts-ignore
+            (currentResponse = listener(message.payload, currentResponse))
       );
       delete this.onceMessageListeners[message.type];
-      this.messageListeners[message.type]?.forEach((listener) =>
-         // @ts-ignore
-         listener(message.payload)
+      this.messageListeners[message.type]?.forEach(
+         (listener) =>
+            // @ts-ignore
+            (currentResponse = listener(message.payload, currentResponse))
       );
+
+      this.onceListeners["message"]?.forEach(
+         (listener) =>
+            // @ts-ignore
+            (currentResponse = listener(
+               message.type,
+               message.payload,
+               currentResponse
+            ))
+      );
+      delete this.onceListeners["message"];
+      this.listeners["message"]?.forEach(
+         (listener) =>
+            // @ts-ignore
+            (currentResponse = listener(
+               message.type,
+               message.payload,
+               currentResponse
+            ))
+      );
+
+      return currentResponse;
    }
 
    private log(...args: any[]) {
@@ -319,7 +364,44 @@ export class PuryFiConnection {
       } else {
          // TODO: Validate message type and payload
 
-         this.emitMessage(message as any);
+         const isExpectingResponse = message.responseId !== undefined;
+
+         let response;
+         try {
+            response = this.emitMessage(message as any);
+         } catch (error) {
+            let messageHandlingError: MessageHandlingError;
+            if (error instanceof MessageHandlingError) {
+               messageHandlingError = error;
+            } else {
+               this.log(
+                  "An unexpected error occurred while handling message:",
+                  error
+               );
+               messageHandlingError = new InternalError();
+            }
+
+            const encodedMessage = this.upstream.encodeMessage({
+               type: "error",
+               payload: {
+                  name: messageHandlingError.name,
+               },
+               responseId: message.responseId,
+            });
+            this.upstream.send(encodedMessage);
+            return;
+         }
+
+         // TODO: If this message expected a response and we have none, respond with an error
+
+         if (isExpectingResponse) {
+            const encodedMessage = this.upstream.encodeMessage({
+               type: "ok",
+               payload: response,
+               responseId: message.responseId,
+            });
+            this.upstream.send(encodedMessage);
+         }
       }
    }
 
@@ -327,9 +409,9 @@ export class PuryFiConnection {
     * Handles an upstream connection open event.
     * @param event The open event
     */
-   private handleOpen(event: OpenEvent) {
+   private handleOpen() {
       this.log("Upstream connection open");
-      this.emit("open", event);
+      this.emit("open");
    }
 
    /**
@@ -357,5 +439,32 @@ export class PuryFiConnectionError extends Error {
       public requestId?: number
    ) {
       super(message);
+   }
+}
+
+export class MessageHandlingError extends Error {
+   constructor(message: string) {
+      super(message);
+   }
+}
+
+export class IncompatibleAPIVersionError extends MessageHandlingError {
+   constructor() {
+      super("Incompatible API version");
+      this.name = "incompatibleApiVersion";
+   }
+}
+
+export class UnhandledMessageError extends MessageHandlingError {
+   constructor(messageType: string) {
+      super(`Message of type ${messageType} is not being handled`);
+      this.name = "unhandledMessage";
+   }
+}
+
+export class InternalError extends MessageHandlingError {
+   constructor() {
+      super("An internal error occurred while handling a message");
+      this.name = "internalError";
    }
 }

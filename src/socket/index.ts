@@ -1,8 +1,5 @@
 import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
-import {
-   PuryFiUpstream,
-   validateHandshakeParameters,
-} from "../core/upstream.js";
+import { PuryFiUpstream } from "../core/upstream.js";
 import { PuryFiConnectionError } from "../core/index.js";
 
 // TODO: Handle multiple clients attempting to connect
@@ -15,14 +12,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
 
    send(data: ArrayBuffer | string): void {
       this.clients.forEach((client) => {
-         if (client.readyState === WebSocket.OPEN) {
-            client.send(data);
-         } else {
-            throw new PuryFiConnectionError(
-               "SocketError",
-               "Message sent before connection was established"
-            );
-         }
+         client.send(data);
       });
    }
 
@@ -57,36 +47,6 @@ export default class PuryFiSocket extends PuryFiUpstream {
       this.socketServer.on("connection", (ws: WebSocket, request) => {
          this.log("New client connected to PuryFiSocket on port", port);
 
-         const requestUrl = new URL(
-            request.url ?? "/",
-            `ws://localhost:${port}`
-         );
-         const version = requestUrl.searchParams.get("version");
-         const apiVersion = requestUrl.searchParams.get("apiVersion");
-
-         try {
-            const result = validateHandshakeParameters(version, apiVersion);
-            if (!result.success) {
-               this.log(
-                  "Rejected new client during handshake on port",
-                  port,
-                  result.reason
-               );
-               ws.close(4000, result.reason);
-               return;
-            }
-         } catch (e) {
-            const reason =
-               "internalError: An internal error occurred while validating the version and API version";
-            this.log(
-               "Rejected new client during handshake on port",
-               port,
-               reason
-            );
-            ws.close(4000, reason);
-            return;
-         }
-
          ws.binaryType = "arraybuffer";
          this.clients.push(ws);
 
@@ -111,10 +71,7 @@ export default class PuryFiSocket extends PuryFiUpstream {
             );
          });
 
-         this.emit("open", {
-            version: version!,
-            apiVersion: apiVersion!,
-         });
+         this.emit("open");
       });
    }
 }

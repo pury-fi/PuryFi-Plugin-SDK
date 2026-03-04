@@ -44,7 +44,13 @@ type AnystateChangePayload = {
  * Messages sent by the extension to plugins
  */
 namespace IncomingMessages {
-   export type Ready = (type: "ready", payload: {}) => void;
+   export type Ready = (
+      type: "ready",
+      payload: {
+         version: string;
+         apiVersion: string;
+      }
+   ) => void;
 
    export type ConfigurationChange = (
       type: "configurationChange",
@@ -75,6 +81,7 @@ namespace IncomingMessages {
 
 export type IncomingMessage =
    | IncomingMessages.Ready
+   | IncomingMessages.ConfigurationChange
    | IncomingMessages.IntentsGrant
    | IncomingMessages.StateChange
    | IncomingMessages.StaticMediaScan;

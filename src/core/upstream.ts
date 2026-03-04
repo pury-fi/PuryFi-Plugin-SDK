@@ -1,21 +1,17 @@
+import { encode } from "@msgpack/msgpack";
 import { PuryFiConnectionError } from ".";
-
-export type UpstreamOpenEvent = {
-   version: string;
-   apiVersion: string;
-};
 
 export type UpstreamEvents = {
    error: (error: PuryFiConnectionError) => void;
    message: (event: ArrayBuffer) => void;
-   open: (event: UpstreamOpenEvent) => void;
+   open: () => void;
    close: () => void;
 };
 
 export const versionReg = /^\d+\.\d+\.\d+\.\d+$/;
 export const apiVersionReg = /^\d+\.\d+\.\d+$/;
-export const minAPIVersion = [1, 0, 0] as const;
-export const maxAPIVersion = [2, 0, 0] as const;
+export const minApiVersion = [1, 0, 0] as const;
+export const maxApiVersion = [2, 0, 0] as const;
 
 export function parseVersion(value: string, parts: number): number[] | null {
    const segments = value.split(".");
@@ -59,6 +55,16 @@ export abstract class PuryFiUpstream {
       // @ts-ignore yes typescript, I know what I'm doing
       this.listeners[type] = created;
       return created;
+   }
+
+   encodeMessage(message: any): ArrayBuffer {
+      const encodedMessage = encode(message);
+
+      const encodedMessageSlice = encodedMessage.buffer.slice(
+         encodedMessage.byteOffset,
+         encodedMessage.byteOffset + encodedMessage.byteLength
+      );
+      return encodedMessageSlice;
    }
 
    /**
@@ -127,48 +133,4 @@ export function isVersion(value: unknown): value is string {
 
 export function isAPIVersion(value: unknown): value is string {
    return typeof value === "string" && apiVersionReg.test(value);
-}
-
-export function validateHandshakeParameters(
-   version: unknown,
-   apiVersion: unknown
-): {
-   success: boolean;
-   reason?: string;
-} {
-   if (!isVersion(version)) {
-      return {
-         success: false,
-         reason: "invalidVersion: Missing or invalid 'version' parameter",
-      };
-   }
-
-   if (!isAPIVersion(apiVersion)) {
-      return {
-         success: false,
-         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
-      };
-   }
-
-   const parsedApiVersion = parseVersion(apiVersion, 3);
-   if (parsedApiVersion == null) {
-      return {
-         success: false,
-         reason: "invalidAPIVersion: Missing or invalid 'apiVersion' parameter",
-      };
-   }
-
-   if (
-      compareVersions(parsedApiVersion, minAPIVersion) < 0 ||
-      0 <= compareVersions(parsedApiVersion, maxAPIVersion)
-   ) {
-      return {
-         success: false,
-         reason: `unsupportedAPIVersion: Unsupported API version. Supported range is '${minAPIVersion.join(
-            "."
-         )}' to '${maxAPIVersion.join(".")}'`,
-      };
-   }
-
-   return { success: true };
 }
