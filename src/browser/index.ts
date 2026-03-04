@@ -1,8 +1,5 @@
 import { PuryFiConnectionError } from "../core/puryfi.js";
-import {
-   PuryFiUpstream,
-   validateHandshakeParameters,
-} from "../core/upstream.js";
+import { PuryFiUpstream } from "../core/upstream.js";
 
 export const extension = globalThis.browser ?? globalThis.chrome;
 
@@ -39,24 +36,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
             let data = event.data as BroadcastMessage;
             if (!initialized) {
                if (data.type === "OPEN") {
-                  const payload = data.data as string;
-                  const [version, apiVersion] = payload.split("|");
-                  const result = validateHandshakeParameters(
-                     version,
-                     apiVersion
-                  );
-                  if (!result.success) {
-                     this.log(
-                        "Rejected client during handshake on BroadcastChannel",
-                        result.reason
-                     );
-                     return;
-                  }
-                  initialized = true;
-                  this.emit("open", {
-                     version,
-                     apiVersion,
-                  });
+                  this.emit("open");
                }
             } else {
                if (data.type === "MESSAGE_FROM_PURYFI") {
@@ -77,20 +57,6 @@ export default class PuryFiBrowser extends PuryFiUpstream {
       } else {
          extension.runtime.onConnect.addListener((port) => {
             if (port.name.startsWith("puryfi-plugin-initiator")) {
-               let version = port.name.split("/")[1];
-               let apiVersion = port.name.split("/")[2];
-
-               const result = validateHandshakeParameters(version, apiVersion);
-               if (!result.success) {
-                  this.log(
-                     "Rejected client during handshake on port",
-                     port,
-                     result.reason
-                  );
-                  port.disconnect();
-                  return;
-               }
-
                this.upstream = port;
                this.upstream.onMessage.addListener((message) => {
                   let tmpRaw = message as Record<string, unknown>;
@@ -102,10 +68,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                   this.emit("close");
                });
 
-               this.emit("open", {
-                  version,
-                  apiVersion,
-               });
+               this.emit("open");
             }
          });
       }
