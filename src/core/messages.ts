@@ -50,7 +50,14 @@ namespace IncomingMessages {
          version: string;
          apiVersion: string;
       }
-   ) => void;
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "incompatibleApiVersion";
+        };
 
    export type ConfigurationChange = (
       type: "configurationChange",

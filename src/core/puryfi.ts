@@ -242,16 +242,23 @@ export class PuryFiConnection {
       });
    }
 
-   handleIncomingReadyMessage(
+   handleReadyMessage(
       payload: PayloadArgument<ExtractByTypeArgument<IncomingMessage, "ready">>
-   ) {
+   ): Return<ExtractByTypeArgument<IncomingMessage, "ready">> {
       const parsedApiVersion = parseVersion(payload.apiVersion, 3)!;
       if (
          compareVersions(parsedApiVersion, minApiVersion) < 0 ||
          0 <= compareVersions(parsedApiVersion, maxApiVersion)
       ) {
-         throw new IncompatibleAPIVersionError();
+         return {
+            type: "error",
+            name: "incompatibleApiVersion",
+         };
       }
+
+      return {
+         type: "ok",
+      };
    }
 
    private emit<K extends keyof Exclude<Events, "message">>(
@@ -364,39 +371,24 @@ export class PuryFiConnection {
       } else {
          // TODO: Validate message type and payload
 
-         const isExpectingResponse = message.responseId !== undefined;
+         const isExpectingResponse = message.responseId != null;
 
          let response;
          try {
             response = this.emitMessage(message as any);
          } catch (error) {
-            let messageHandlingError: MessageHandlingError;
-            if (error instanceof MessageHandlingError) {
-               messageHandlingError = error;
-            } else {
-               this.log(
-                  "An unexpected error occurred while handling message:",
-                  error
-               );
-               messageHandlingError = new InternalError();
-            }
-
-            const encodedMessage = this.upstream.encodeMessage({
-               type: "error",
-               payload: {
-                  name: messageHandlingError.name,
-               },
-               responseId: message.responseId,
-            });
-            this.upstream.send(encodedMessage);
+            this.emit(
+               "error",
+               new PuryFiConnectionError(
+                  "ClientError",
+                  "Error while handling message"
+               )
+            );
             return;
          }
 
-         // TODO: If this message expected a response and we have none, respond with an error
-
-         if (isExpectingResponse) {
+         if (isExpectingResponse && response !== undefined) {
             const encodedMessage = this.upstream.encodeMessage({
-               type: "ok",
                payload: response,
                responseId: message.responseId,
             });
@@ -439,32 +431,5 @@ export class PuryFiConnectionError extends Error {
       public requestId?: number
    ) {
       super(message);
-   }
-}
-
-export class MessageHandlingError extends Error {
-   constructor(message: string) {
-      super(message);
-   }
-}
-
-export class IncompatibleAPIVersionError extends MessageHandlingError {
-   constructor() {
-      super("Incompatible API version");
-      this.name = "incompatibleApiVersion";
-   }
-}
-
-export class UnhandledMessageError extends MessageHandlingError {
-   constructor(messageType: string) {
-      super(`Message of type ${messageType} is not being handled`);
-      this.name = "unhandledMessage";
-   }
-}
-
-export class InternalError extends MessageHandlingError {
-   constructor() {
-      super("An internal error occurred while handling a message");
-      this.name = "internalError";
    }
 }
