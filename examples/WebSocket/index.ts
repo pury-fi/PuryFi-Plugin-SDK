@@ -57,17 +57,22 @@ connection.on("error", (error: PuryFiConnectionError) => {
 connection.once("open", async () => {
    console.log(`Connected to PuryFi`);
 
-   await new Promise<void>((resolve) => {
-      connection.once("message", "ready", (payload) => {
-         connection.handleIncomingReadyMessage(payload);
-
-         console.log(
-            `Connected PuryFi ${payload.version} with Plugins API ${payload.apiVersion} is ready to receive messages`
-         );
-
-         resolve();
+   let { version, apiVersion } = await new Promise<{
+      version: string;
+      apiVersion: string;
+   }>((resolve) => {
+      connection.on("message", "ready", function listener(payload) {
+         const response = connection.handleReadyMessage(payload);
+         if (response.type === "ok") {
+            resolve(payload);
+         }
+         return response;
       });
    });
+
+   console.log(
+      `Connected PuryFi ${version} with Plugins API ${apiVersion} is ready to receive messages`
+   );
 
    /**
     * The plugin sends a series of messages to PuryFi to set up the plugin's manifest, configuration, and request the necessary intents.
