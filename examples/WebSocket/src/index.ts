@@ -1,11 +1,13 @@
 import PuryFiSocket from "@puryfi/puryfi-plugin-sdk/socket";
 import {
-   PluginConfiguration,
-   PluginManifest,
    PuryFiConnection,
    PuryFiConnectionError,
 } from "@puryfi/puryfi-plugin-sdk";
-import { Intent } from "@puryfi/puryfi-plugin-sdk";
+import type {
+   PluginConfiguration,
+   PluginManifest,
+   Intent,
+} from "@puryfi/puryfi-plugin-sdk";
 
 /**
  * This example demonstrates how to set up a WebSocket server using PuryFiSocket and establish a connection with PuryFi using PuryFiConnection.

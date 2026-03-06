@@ -36,6 +36,12 @@ export default class PuryFiBrowser extends PuryFiUpstream {
             let data = event.data as BroadcastMessage;
             if (!initialized) {
                if (data.type === "OPEN") {
+                  setInterval(() => {
+                     const ping = new ArrayBuffer(1);
+                     new Uint8Array(ping)[0] = 0x09;
+                     this.send(ping);
+                  }, 2000)
+                  initialized = true;
                   this.emit("open");
                }
             } else {

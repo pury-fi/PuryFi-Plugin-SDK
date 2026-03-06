@@ -27,10 +27,8 @@ bc.onmessage = (e) => {
   if (!msg) return;
 
   if (msg.type === 'OPEN') {
-    let params = new URLSearchParams(window.location.search);
     bc.postMessage({
       type: 'OPEN',
-      data: params.get('version') + '|' + params.get('apiVersion'),
     });
   } else if (msg.type === 'SEND_TO_PURYFI') {
     if (!peerPort) return;
