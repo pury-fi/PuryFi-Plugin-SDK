@@ -5,7 +5,7 @@ import {
    ReadOnlyValue,
    WriteOnlyPath,
    WriteOnlyValue,
-} from ".";
+} from "./";
 import { Object } from "./object";
 
 export type TypeArgument<T> = T extends (type: infer A, payload: any) => any
