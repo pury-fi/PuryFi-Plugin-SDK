@@ -121,9 +121,20 @@ type AnyOutgoingGetStateMessage = {
       payload: {
          path: P;
       }
-   ) => {
-      value: ReadOnlyValue<P>;
-   };
+   ) =>
+      | {
+           type: "ok";
+           value: ReadOnlyValue<P>;
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "unavailablePath";
+           message: string;
+        };
 }[ReadOnlyPath];
 
 /**
@@ -135,51 +146,121 @@ namespace OutgoingMessages {
       payload: {
          intents: Intent[];
       }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+           pendingIntents: Intent[];
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type GetPendingIntents = (
       type: "getPendingIntents",
       payload: {}
-   ) => {
-      pendingIntents: Intent[];
-   };
+   ) =>
+      | {
+           type: "ok";
+           pendingIntents: Intent[];
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type GetIntents = (
       type: "getIntents",
       payload: {}
-   ) => {
-      intents: Intent[];
-   };
+   ) =>
+      | {
+           type: "ok";
+           intents: Intent[];
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type SetManifest = (
       type: "setManifest",
       payload: {
          manifest: PluginManifest;
       }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type GetManifest = (
       type: "getManifest",
       payload: {}
-   ) => {
-      manifest: PluginManifest;
-   };
+   ) =>
+      | {
+           type: "ok";
+           manifest: PluginManifest;
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type SetConfiguration = (
       type: "setConfiguration",
       payload: {
          configuration: PluginConfiguration;
       }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
    export type GetConfiguration = (
       type: "getConfiguration",
       payload: {}
-   ) => {
-      configuration: PluginConfiguration;
-   };
+   ) =>
+      | {
+           type: "ok";
+           configuration: PluginConfiguration;
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
 
-   export type SetState = (type: "setState", payload: AnySetStatePayload) => {};
+   export type SetState = (
+      type: "setState",
+      payload: AnySetStatePayload
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "unavailablePath";
+           message: string;
+        };
+
+   // TODO: Update return type of this message
 
    export type GetState = AnyOutgoingGetStateMessage;
 
@@ -188,33 +269,82 @@ namespace OutgoingMessages {
       payload: {
          path: ReadOnlyPath;
       }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "unavailablePath";
+           message: string;
+        };
 
    export type UnwatchState = (
       type: "unwatchState",
       payload: {
          path: ReadOnlyPath;
       }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "unavailablePath";
+           message: string;
+        };
 
    export type WatchStaticMediaScans = (
       type: "watchStaticMediaScans",
       payload: {}
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+        };
 
    export type UnwatchStaticMediaScans = (
       type: "unwatchStaticMediaScans",
       payload: {}
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+        };
 
    export type ScanStaticMedia = (
       type: "scanStaticMedia",
       payload: {
          image: Uint8Array;
       }
-   ) => {
-      objects: Object[];
-   };
+   ) =>
+      | {
+           type: "ok";
+           objects: Object[];
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "invalidImage";
+           message: string;
+        };
 
    export type CensorStaticMedia = (
       type: "censorStaticMedia",
@@ -222,20 +352,60 @@ namespace OutgoingMessages {
          image: Uint8Array;
          objects: null | Object[];
       }
-   ) => {
-      image: Uint8Array;
-      objects: Object[];
-   };
+   ) =>
+      | {
+           type: "ok";
+           image: Uint8Array;
+           objects: Object[];
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "invalidImage";
+           message: string;
+        };
 
    export type EnterLockPassword = (
       type: "enterLockPassword",
       payload: { secret: string }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+           image: Uint8Array;
+           objects: Object[];
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "noEnabledLock"
+              | "noEnabledLockPassword"
+              | "incorrectLockPassword";
+        };
 
    export type EnterLockEmergencyServerToken = (
       type: "enterLockEmergencyServerToken",
       payload: { emergencyServerToken: number }
-   ) => {};
+   ) =>
+      | {
+           type: "ok";
+           image: Uint8Array;
+           objects: Object[];
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "noEnabledLock"
+              | "incorrectLockEmergencyServerToken";
+        };
 }
 
 export type OutgoingMessage =

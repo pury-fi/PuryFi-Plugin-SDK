@@ -77,17 +77,38 @@ connection.once("open", async () => {
    /**
     * The plugin sends a series of messages to PuryFi to set up the plugin's manifest, configuration, and request the necessary intents.
     */
-   await connection.sendMessage("setManifest", { manifest });
+   await connection
+      .sendMessage("setManifest", { manifest })
+      .then((response) => {
+         if (response.type === "error") {
+            throw new Error("Received error response");
+         }
+         return response;
+      });
 
-   await connection.sendMessage("setConfiguration", {
-      configuration,
-   });
+   await connection
+      .sendMessage("setConfiguration", {
+         configuration,
+      })
+      .then((response) => {
+         if (response.type === "error") {
+            throw new Error(`Received error response: ${response.message}`);
+         }
+         return response;
+      });
 
    /**
     * The plugin checks if the required intents are already granted by sending a "getIntents" message to PuryFi.
     * If any of the required intents are not granted, the plugin sends a "requestIntents" message to request those intents from the user.
     */
-   const response = await connection.sendMessage("getIntents", {});
+   const response = await connection
+      .sendMessage("getIntents", {})
+      .then((response) => {
+         if (response.type === "error") {
+            throw new Error(`Received error response: ${response.message}`);
+         }
+         return response;
+      });
 
    if (!intents.every((intent) => response.intents.includes(intent))) {
       await new Promise<void>(async (resolve) => {
@@ -95,7 +116,6 @@ connection.once("open", async () => {
             "message",
             "intentsGrant",
             async function listener({ intents }) {
-               console.log("Received intentsGrant message", intents);
                if (
                   intents.every((intent) => response.intents.includes(intent))
                ) {

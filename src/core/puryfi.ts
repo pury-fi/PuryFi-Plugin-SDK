@@ -214,7 +214,21 @@ export class PuryFiConnection {
    async sendMessage<T extends "getState", P extends ReadOnlyPath>(
       type: T,
       payload: { path: P }
-   ): Promise<{ value: ReadOnlyValue<P> }>;
+   ): Promise<
+      | {
+           type: "ok";
+           value: ReadOnlyValue<P>;
+        }
+      | {
+           type: "error";
+           name:
+              | "internalError"
+              | "invalidMessage"
+              | "missingIntents"
+              | "unavailablePath";
+           message: string;
+        }
+   >;
    async sendMessage<
       T extends Exclude<TypeArgument<OutgoingMessage>, "getState">,
    >(
@@ -353,16 +367,6 @@ export class PuryFiConnection {
                message.responseId
             );
             return;
-         }
-
-         if (!isUndefined(message.error)) {
-            responseCallback[1](
-               new PuryFiConnectionError(
-                  "ResponseError",
-                  message.error as string,
-                  message.responseId
-               )
-            );
          }
 
          responseCallback[0](message.payload);
