@@ -1,55 +1,139 @@
 # PuryFi State API Reference
 
-> RPC-style API for querying and mutating PuryFi state via `sendQueries()`.
+> Read, write, and watch PuryFi's internal state through `connection.sendMessage()`.
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [enabled](#1-enabled)
-- [lockConfiguration](#2-lockconfiguration)
-  - [.password](#password)
-  - [.password.secret](#passwordsecret)
-  - [.timer](#timer)
-  - [.timer.endTime](#timerendtime)
-  - [.timerPlus](#timerplus)
-  - [.timerPlus.timesPerLabel](#timersplustimesperlabel)
-  - [.emergencyClientToken](#emergencyclienttoken)
-  - [.startTime](#starttime)
-- [wblistConfiguration](#3-wblistconfiguration)
-  - [.mode](#mode)
-  - [.whitelist](#whitelist)
-  - [.blacklist](#blacklist)
+- [Reading State](#reading-state)
+- [Writing State](#writing-state)
+- [Watching State](#watching-state)
+- [State Tree](#state-tree)
+  - [enabled](#1-enabled)
+  - [lockConfiguration](#2-lockconfiguration)
+  - [wblistConfiguration](#3-wblistconfiguration)
+  - [user](#4-user)
 - [Quick Reference](#quick-reference)
 
 ---
 
 ## Overview
 
-The State API lets plugins read and write PuryFi's internal state through **queries** — small RPC-like operations sent in batches via `puryfiSDK.sendQueries()`. Each query targets a **path** (dot-separated key like `lockConfiguration.timer.endTime`) and performs either a **get** or **set** operation.
+The State API lets plugins read, write, and watch PuryFi's internal state using **dot-separated paths** like `lockConfiguration.timer.endTime`. Each path has an access level controlling which operations are allowed.
 
-```typescript
-const [enabled, wbMode] = await puryfiSDK.sendQueries(
-  { op: "get", path: "enabled" },
-  { op: "get", path: "wblistConfiguration.mode" }
-);
-```
+State operations are regular messages sent via `connection.sendMessage()`:
+
+| Message | Direction | Description |
+|---------|-----------|-------------|
+| `getState` | Plugin → PuryFi | Read a value at a path |
+| `setState` | Plugin → PuryFi | Write a value at a path |
+| `watchState` | Plugin → PuryFi | Subscribe to changes at a path |
+| `unwatchState` | Plugin → PuryFi | Unsubscribe from changes at a path |
+| `stateChange` | PuryFi → Plugin | Notification that a watched value changed |
+
+### Required Intents
+
+State paths are gated by intents. You must request the appropriate intents before accessing a path. See the [Intents section in the README](../README.md#intents) for the full list of available intents.
+
+| Intent | Paths |
+|--------|-------|
+| `readEnabled` | `enabled` (get, watch) |
+| `writeEnabled` | `enabled` (set) |
+| `readLockConfiguration` | `lockConfiguration.*` (get, watch) |
+| `writeLockConfiguration` | `lockConfiguration.*` (set) |
+| `readWBlistConfiguration` | `wblistConfiguration.*` (get, watch) |
+| `writeWBlistConfiguration` | `wblistConfiguration.*` (set) |
+| `readUser` | `user.*` (get, watch) |
 
 ### Access Levels
 
 Each path has an access level that determines which operations are allowed:
 
-| Access | `get` | `set` | Description |
-|--------|:-----:|:-----:|-------------|
-| **read-write** | ✅ | ✅ | Full access — read and write freely |
-| **read-only** | ✅ | ❌ | Can be read but not modified by plugins |
-| **protected** | ❌ | ✅ | Can be written but the value is never returned to the plugin |
+| Access | `getState` | `setState` | Description |
+|--------|:----------:|:----------:|-------------|
+| **read-write** | ✅ | ✅ | Full access |
+| **read-only** | ✅ | ❌ | Can be read but not written |
+| **write-only** | ❌ | ✅ | Can be written but the value is never returned |
 | **no access** | ❌ | ❌ | Completely inaccessible |
-
-> Access is **inherited**. If a parent path is read-only, all of its children are also not directly settable at the parent level, but individual children may still be writable at their own path.
 
 ---
 
-## 1. `enabled`
+## Reading State
+
+Use `getState` to read a value at a path. The response includes a typed `value` on success.
+
+```typescript
+const res = await connection.sendMessage("getState", { path: "enabled" });
+if (res.type === "ok") {
+   console.log("Enabled:", res.value); // boolean
+}
+```
+
+When reading an object path, write-only fields are omitted from the response:
+
+```typescript
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration",
+});
+if (res.type === "ok" && res.value !== null) {
+   // res.value.password?.secret is omitted (write-only)
+   console.log("Lock start:", res.value.startTime);
+}
+```
+
+### Error Responses
+
+```typescript
+if (res.type === "error") {
+   // res.name: "internalError" | "invalidMessage" | "missingIntents" | "unavailablePath"
+   console.error(res.name, res.message);
+}
+```
+
+---
+
+## Writing State
+
+Use `setState` to write a value at a path.
+
+```typescript
+const res = await connection.sendMessage("setState", {
+   path: "wblistConfiguration.mode",
+   value: "whitelist",
+});
+if (res.type === "error") {
+   console.error(res.name, res.message);
+}
+```
+
+---
+
+## Watching State
+
+Subscribe to real-time change notifications for a path using `watchState`. When the value changes, PuryFi sends a `stateChange` message.
+
+```typescript
+// Subscribe
+await connection.sendMessage("watchState", { path: "enabled" });
+
+// Handle changes
+connection.on("message", "stateChange", (payload) => {
+   console.log(`${payload.path} changed to`, payload.value);
+});
+
+// Unsubscribe
+await connection.sendMessage("unwatchState", { path: "enabled" });
+```
+
+The `stateChange` payload contains:
+- `path` — the state path that changed
+- `value` — the new value (with write-only fields omitted for object paths)
+
+---
+
+## State Tree
+
+### 1. `enabled`
 
 Whether PuryFi's content filtering is currently active.
 
@@ -58,253 +142,186 @@ Whether PuryFi's content filtering is currently active.
 | **Path** | `enabled` |
 | **Type** | `boolean` |
 | **Access** | read-write |
-| **Operations** | `get` `set` |
+| **Intents** | `readEnabled` / `writeEnabled` |
 
 ```typescript
 // Read
-const [enabled] = await puryfiSDK.sendQueries(
-  { op: "get", path: "enabled" }
-);
+const res = await connection.sendMessage("getState", { path: "enabled" });
+// res.value: boolean
 
 // Write
-await puryfiSDK.sendQueries(
-  { op: "set", path: "enabled", value: true }
-);
+await connection.sendMessage("setState", { path: "enabled", value: true });
 ```
 
 ---
 
-## 2. `lockConfiguration`
+### 2. `lockConfiguration`
 
-The active lock configuration. Contains lock type details and metadata.  
-This entire subtree is `undefined` when no lock is active.
+The active lock configuration. `null` when no lock is active. Contains lock type details and metadata.
 
 | | |
 |---|---|
 | **Path** | `lockConfiguration` |
-| **Type** | `object \| undefined` |
-| **Access** | read-only |
-| **Operations** | `get` |
-
-> `lockConfiguration` itself can only be read, not written directly. Individual children have their own access levels — see below.
+| **Type** | `object \| null` |
+| **Access** | read-write |
+| **Intents** | `readLockConfiguration` / `writeLockConfiguration` |
 
 ```typescript
-const [lock] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration" }
-);
-```
-
-**Response shape** (read view — protected fields omitted):
-```typescript
-{
-  password?: {
-    // secret is protected — omitted from reads
-  },
-  timer?: {
-    endTime: number
-  },
-  timerPlus?: {
-    timesPerLabel: Record<number, number>
-  },
-  emergencyClientToken: string,
-  startTime: number
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration",
+});
+if (res.type === "ok" && res.value !== null) {
+   console.log("Lock started at:", res.value.startTime);
 }
 ```
 
-**Paths in this section:**
+**Read-view shape** (write-only fields omitted):
+```typescript
+{
+   password: null | {
+      // secret is write-only — omitted from reads
+   },
+   timer: null | {
+      endTime: number
+   },
+   timerPlus: null | {
+      timesPerLabel: Record<number, number>
+   },
+   emergencyClientToken: number,
+   startTime: number
+}
+```
+
+#### All Paths
 
 | Path | Type | `get` | `set` |
 |------|------|:-----:|:-----:|
-| `lockConfiguration` | `object?` | ✅ | ❌ |
-| `lockConfiguration.password` | `object?` | ✅ | ✅ |
+| `lockConfiguration` | `object \| null` | ✅ | ✅ |
+| `lockConfiguration.password` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.password.secret` | `string` | ❌ | ✅ |
-| `lockConfiguration.timer` | `object?` | ✅ | ✅ |
+| `lockConfiguration.timer` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.timer.endTime` | `number` | ✅ | ✅ |
-| `lockConfiguration.timerPlus` | `object?` | ✅ | ✅ |
+| `lockConfiguration.timerPlus` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` | ✅ | ✅ |
-| `lockConfiguration.emergencyClientToken` | `string` | ✅ | ❌ |
+| `lockConfiguration.emergencyClientToken` | `number` | ✅ | ❌ |
 | `lockConfiguration.startTime` | `number` | ✅ | ❌ |
 
 ---
 
-### `password`
+#### `lockConfiguration.password`
 
-The password lock configuration. Present when the lock is password-based.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.password` |
-| **Type** | `object \| undefined` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+The password lock configuration. `null` when the lock is not password-based.
 
 ```typescript
-const [password] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.password" }
-);
-// Returns: { } (secret is protected and omitted)
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.password",
+});
+// res.value: null | { } (secret is write-only and omitted)
 ```
 
----
+#### `lockConfiguration.password.secret`
 
-### `password.secret`
-
-The actual password secret. **Protected** — plugins can set it but never read it.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.password.secret` |
-| **Type** | `string` |
-| **Access** | protected |
-| **Operations** | `set` |
+The password secret. **Write-only** — can be set but never read.
 
 ```typescript
-await puryfiSDK.sendQueries(
-  { op: "set", path: "lockConfiguration.password.secret", value: "new-secret" }
-);
+await connection.sendMessage("setState", {
+   path: "lockConfiguration.password.secret",
+   value: "new-secret",
+});
 ```
 
----
+#### `lockConfiguration.timer`
 
-### `timer`
-
-The timer lock configuration. Present when the lock is timer-based.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.timer` |
-| **Type** | `object \| undefined` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+The timer lock configuration. `null` when the lock is not timer-based.
 
 ```typescript
-const [timer] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.timer" }
-);
-// Returns: { endTime: number }
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.timer",
+});
+// res.value: null | { endTime: number }
 ```
 
----
-
-### `timer.endTime`
+#### `lockConfiguration.timer.endTime`
 
 Unix timestamp (ms) when the timer lock expires.
 
-| | |
-|---|---|
-| **Path** | `lockConfiguration.timer.endTime` |
-| **Type** | `number` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
-
 ```typescript
-const [endTime] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.timer.endTime" }
-);
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.timer.endTime",
+});
+// res.value: number
 
-await puryfiSDK.sendQueries(
-  { op: "set", path: "lockConfiguration.timer.endTime", value: Date.now() + 3600000 }
-);
+await connection.sendMessage("setState", {
+   path: "lockConfiguration.timer.endTime",
+   value: Date.now() + 3600000,
+});
 ```
 
----
+#### `lockConfiguration.timerPlus`
 
-### `timerPlus`
-
-The timer-plus lock configuration. Present when the lock uses the timer-plus mode.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.timerPlus` |
-| **Type** | `object \| undefined` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+The timer-plus lock configuration. `null` when the lock does not use timer-plus mode.
 
 ```typescript
-const [timerPlus] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.timerPlus" }
-);
-// Returns: { timesPerLabel: Record<number, number> }
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.timerPlus",
+});
+// res.value: null | { timesPerLabel: Record<number, number> }
 ```
 
----
-
-### `timerPlus.timesPerLabel`
+#### `lockConfiguration.timerPlus.timesPerLabel`
 
 A map of label IDs to remaining time values for the timer-plus lock.
 
-| | |
-|---|---|
-| **Path** | `lockConfiguration.timerPlus.timesPerLabel` |
-| **Type** | `Record<number, number>` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+```typescript
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.timerPlus.timesPerLabel",
+});
+// res.value: Record<number, number>
+```
+
+#### `lockConfiguration.emergencyClientToken`
+
+A numeric token used for emergency unlock flows. **Read-only.**
 
 ```typescript
-const [timesPerLabel] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.timerPlus.timesPerLabel" }
-);
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.emergencyClientToken",
+});
+// res.value: number
+```
+
+#### `lockConfiguration.startTime`
+
+Unix timestamp (ms) of when the lock was activated. **Read-only.**
+
+```typescript
+const res = await connection.sendMessage("getState", {
+   path: "lockConfiguration.startTime",
+});
+// res.value: number
 ```
 
 ---
 
-### `emergencyClientToken`
+### 3. `wblistConfiguration`
 
-A token used for emergency unlock flows.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.emergencyClientToken` |
-| **Type** | `string` |
-| **Access** | read-only |
-| **Operations** | `get` |
-
-```typescript
-const [token] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.emergencyClientToken" }
-);
-```
-
----
-
-### `startTime`
-
-Unix timestamp (ms) of when the lock was activated.
-
-| | |
-|---|---|
-| **Path** | `lockConfiguration.startTime` |
-| **Type** | `number` |
-| **Access** | read-only |
-| **Operations** | `get` |
-
-```typescript
-const [startTime] = await puryfiSDK.sendQueries(
-  { op: "get", path: "lockConfiguration.startTime" }
-);
-```
-
----
-
-## 3. `wblistConfiguration`
-
-The whitelist/blacklist configuration object.
+The whitelist/blacklist configuration.
 
 | | |
 |---|---|
 | **Path** | `wblistConfiguration` |
 | **Type** | `object` |
 | **Access** | read-write |
-| **Operations** | `get` `set` |
+| **Intents** | `readWBlistConfiguration` / `writeWBlistConfiguration` |
 
 ```typescript
-const [wblist] = await puryfiSDK.sendQueries(
-  { op: "get", path: "wblistConfiguration" }
-);
-// Returns: { mode, whitelist, blacklist }
+const res = await connection.sendMessage("getState", {
+   path: "wblistConfiguration",
+});
+// res.value: { mode, whitelist, blacklist }
 ```
 
-**Paths in this section:**
+#### All Paths
 
 | Path | Type | `get` | `set` |
 |------|------|:-----:|:-----:|
@@ -315,77 +332,88 @@ const [wblist] = await puryfiSDK.sendQueries(
 
 ---
 
-### `mode`
+#### `wblistConfiguration.mode`
 
 Whether the list operates as a whitelist or a blacklist.
 
-| | |
-|---|---|
-| **Path** | `wblistConfiguration.mode` |
-| **Type** | `"whitelist" \| "blacklist"` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
-
 ```typescript
-const [mode] = await puryfiSDK.sendQueries(
-  { op: "get", path: "wblistConfiguration.mode" }
-);
+const res = await connection.sendMessage("getState", {
+   path: "wblistConfiguration.mode",
+});
+// res.value: "whitelist" | "blacklist"
 
-await puryfiSDK.sendQueries(
-  { op: "set", path: "wblistConfiguration.mode", value: "whitelist" }
-);
+await connection.sendMessage("setState", {
+   path: "wblistConfiguration.mode",
+   value: "whitelist",
+});
 ```
 
----
-
-### `whitelist`
+#### `wblistConfiguration.whitelist`
 
 Array of whitelist entries. Each entry has a matching mode and a value.
 
-| | |
-|---|---|
-| **Path** | `wblistConfiguration.whitelist` |
-| **Type** | `Array<{ mode: "text" \| "regex"; value: string }>` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+```typescript
+await connection.sendMessage("setState", {
+   path: "wblistConfiguration.whitelist",
+   value: [
+      { mode: "text", value: "example.com" },
+      { mode: "regex", value: ".*\\.safe\\.org" },
+   ],
+});
+```
+
+#### `wblistConfiguration.blacklist`
+
+Array of blacklist entries. Same shape as whitelist entries.
 
 ```typescript
-const [whitelist] = await puryfiSDK.sendQueries(
-  { op: "get", path: "wblistConfiguration.whitelist" }
-);
-
-await puryfiSDK.sendQueries(
-  { op: "set", path: "wblistConfiguration.whitelist", value: [
-    { mode: "text", value: "example.com" },
-    { mode: "regex", value: ".*\\.safe\\.org" }
-  ]}
-);
+await connection.sendMessage("setState", {
+   path: "wblistConfiguration.blacklist",
+   value: [{ mode: "text", value: "bad-site.com" }],
+});
 ```
 
 ---
 
-### `blacklist`
+### 4. `user`
 
-Array of blacklist entries. Each entry has a matching mode and a value.
+The currently logged-in user. `null` when no user is signed in. **Entirely read-only.**
 
 | | |
 |---|---|
-| **Path** | `wblistConfiguration.blacklist` |
-| **Type** | `Array<{ mode: "text" \| "regex"; value: string }>` |
-| **Access** | read-write |
-| **Operations** | `get` `set` |
+| **Path** | `user` |
+| **Type** | `object \| null` |
+| **Access** | read-only |
+| **Intents** | `readUser` |
 
 ```typescript
-const [blacklist] = await puryfiSDK.sendQueries(
-  { op: "get", path: "wblistConfiguration.blacklist" }
-);
-
-await puryfiSDK.sendQueries(
-  { op: "set", path: "wblistConfiguration.blacklist", value: [
-    { mode: "text", value: "bad-site.com" }
-  ]}
-);
+const res = await connection.sendMessage("getState", { path: "user" });
+if (res.type === "ok" && res.value !== null) {
+   console.log("Username:", res.value.username);
+   console.log("Support tier:", res.value.supportTier.name);
+}
 ```
+
+**Shape:**
+```typescript
+{
+   username: string,
+   supportTier: {
+      level: number | null,
+      name: string
+   }
+}
+```
+
+#### All Paths
+
+| Path | Type | `get` | `set` |
+|------|------|:-----:|:-----:|
+| `user` | `object \| null` | ✅ | ❌ |
+| `user.username` | `string` | ✅ | ❌ |
+| `user.supportTier` | `object` | ✅ | ❌ |
+| `user.supportTier.level` | `number \| null` | ✅ | ❌ |
+| `user.supportTier.name` | `string` | ✅ | ❌ |
 
 ---
 
@@ -396,39 +424,27 @@ await puryfiSDK.sendQueries(
 | Path | Type | `get` | `set` |
 |------|------|:-----:|:-----:|
 | `enabled` | `boolean` | ✅ | ✅ |
-| `lockConfiguration` | `object?` | ✅ | ❌ |
-| `lockConfiguration.password` | `object?` | ✅ | ✅ |
+| `lockConfiguration` | `object \| null` | ✅ | ✅ |
+| `lockConfiguration.password` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.password.secret` | `string` | ❌ | ✅ |
-| `lockConfiguration.timer` | `object?` | ✅ | ✅ |
+| `lockConfiguration.timer` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.timer.endTime` | `number` | ✅ | ✅ |
-| `lockConfiguration.timerPlus` | `object?` | ✅ | ✅ |
+| `lockConfiguration.timerPlus` | `object \| null` | ✅ | ✅ |
 | `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` | ✅ | ✅ |
-| `lockConfiguration.emergencyClientToken` | `string` | ✅ | ❌ |
+| `lockConfiguration.emergencyClientToken` | `number` | ✅ | ❌ |
 | `lockConfiguration.startTime` | `number` | ✅ | ❌ |
 | `wblistConfiguration` | `object` | ✅ | ✅ |
 | `wblistConfiguration.mode` | `"whitelist" \| "blacklist"` | ✅ | ✅ |
 | `wblistConfiguration.whitelist` | `Array<{ mode, value }>` | ✅ | ✅ |
 | `wblistConfiguration.blacklist` | `Array<{ mode, value }>` | ✅ | ✅ |
-
-### Batching Queries
-
-`sendQueries()` accepts any number of query objects and returns a typed tuple of results in the same order:
-
-```typescript
-const [a, b, c] = await puryfiSDK.sendQueries(
-  { op: "get", path: "enabled" },
-  { op: "get", path: "lockConfiguration.startTime" },
-  { op: "set", path: "wblistConfiguration.mode", value: "blacklist" }
-);
-// a: boolean
-// b: number
-// c: undefined (set queries return undefined)
-```
+| `user` | `object \| null` | ✅ | ❌ |
+| `user.username` | `string` | ✅ | ❌ |
+| `user.supportTier` | `object` | ✅ | ❌ |
+| `user.supportTier.level` | `number \| null` | ✅ | ❌ |
+| `user.supportTier.name` | `string` | ✅ | ❌ |
 
 ### Notes
 
-- **Timeout**: Queries time out after **5 seconds** if PuryFi does not respond.
-- **Return values**: `get` queries return the value at the path. `set` queries return `undefined`.
-- **Nested reads**: When you `get` an object path, protected fields within it are omitted from the response.
-- **Optional paths**: Paths under `lockConfiguration` may return `undefined` if no lock is currently active, or if the specific lock type is not the one in use.
-- **Type safety**: All paths, operations, and values are fully type-checked at compile time. The TypeScript compiler will prevent you from reading protected paths or writing to read-only paths.
+- **Nullable paths**: `lockConfiguration` and `user` are `null` when no lock is active or no user is signed in, respectively. Sub-paths under `lockConfiguration` like `password`, `timer`, and `timerPlus` are `null` when that lock type is not in use.
+- **Nested reads**: When you `getState` on an object path, write-only fields within it are omitted from the response.
+- **Type safety**: All paths, operations, values, and access levels are fully type-checked at compile time. TypeScript prevents reading write-only paths and writing to read-only paths.
