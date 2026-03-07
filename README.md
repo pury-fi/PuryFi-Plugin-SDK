@@ -527,8 +527,8 @@ Detailed reference documentation for specific subsystems:
 
 Working example projects are included in the `examples/` directory:
 
-- [**WebSocket**](examples/WebSocket) — standalone Node.js plugin using `PuryFiSocket`
-- [**ChromiumPlugin**](examples/ChromiumPlugin) — browser extension plugin using `PuryFiBrowser` with the Chromium bridge
+- [**WebSocket**](examples/WebSocket) — standalone Node.js plugin using `PuryFiSocket`. Demonstrates state reading, writing, and watching (enabled, lock configuration, whitelist/blacklist), configuration change handling, and auto-enable-on-lock logic.
+- [**ChromiumPlugin**](examples/ChromiumPlugin) — browser extension plugin using `PuryFiBrowser` with the Chromium bridge. Demonstrates live media scan monitoring, detection filtering by confidence threshold, per-label statistics tracking, and whitelist/blacklist state reading.
 
 ## Development
 

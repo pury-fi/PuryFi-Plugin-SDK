@@ -4,112 +4,231 @@ import {
    PluginManifest,
    PuryFiConnection,
    PuryFiConnectionError,
+   Label,
 } from "@puryfi/puryfi-plugin-sdk";
-import { Intent } from "@puryfi/puryfi-plugin-sdk";
+import type { Intent } from "@puryfi/puryfi-plugin-sdk";
 
-console.log("open");
 /**
- * This example demonstrates how to set up a WebSocket server using PuryFiSocket and establish a connection with PuryFi using PuryFiConnection.
+ * Chromium Extension Example
+ *
+ * This example demonstrates a browser extension plugin that:
+ * - Connects to PuryFi via the BroadcastChannel bridge (Chromium)
+ * - Watches for live media scan events and logs detection statistics
+ * - Reads and watches the whitelist/blacklist configuration
+ * - Handles user-editable configuration with a detection score threshold
  */
+
 const upstreamConnection = new PuryFiBrowser();
 const connection = new PuryFiConnection(upstreamConnection);
 
-/**
- * The debug mode is enabled for both the upstream connection and the main connection to log detailed information about the connection process and message handling.
- * This can be helpful for development and troubleshooting purposes.
- */
 upstreamConnection.setDebug(true);
 connection.setDebug(true);
 
-/**
- * Intents represent the permissions that the plugin requires to function properly. In this example, the intents array is empty, which means that the plugin does not require any special permissions.
- * In a real plugin, you would populate this array with the specific intents that your plugin needs, such as "readUser", "writeLockConfiguration", etc.
- * The plugin will request these intents from PuryFi, and the user will have the option to grant or deny them.
- * It's important to only request the intents that are necessary for your plugin's functionality to ensure a better user experience and maintain trust.
- */
-const intents: Intent[] = ["readWBlistConfiguration"];
+const intents: Intent[] = [
+   "readEnabled",
+   "readWBlistConfiguration",
+   "readMediaProcesses",
+   "readUser",
+];
 
-/**
- * The manifest object contains metadata about the plugin, such as its name, version, description, author, and website.
- * This information is used by PuryFi to display details about the plugin to users and can also be useful for plugin management and updates.
- * The configuration object defines the settings that the plugin can be configured with. In this example, there is a single configuration field called "exampleField" of type "number" with an initial value of 0.
- * In a real plugin, you would define configuration fields that are relevant to your plugin's functionality, allowing users to customize the behavior of the plugin through the PuryFi interface.
- */
 const manifest: PluginManifest = {
-   name: "Example Plugin",
+   name: "Detection Monitor",
    version: "1.0.0",
-   description: "An example plugin",
+   description: "Monitors PuryFi media scans and logs detection statistics",
    author: null,
    website: null,
 };
 
-const configuration: PluginConfiguration = {
-   exampleField: {
-      value: 0,
+let configuration: PluginConfiguration = {
+   scoreThreshold: {
+      value: 0.7,
       type: "number",
-      name: "Example field",
+      name: "Minimum confidence score to log",
+   },
+   logFaces: {
+      value: false,
+      type: "boolean",
+      name: "Include face detections in log",
    },
 };
 
+// Track detection statistics across scans
+let totalScans = 0;
+let totalDetections = 0;
+const detectionsByLabel: Record<number, number> = {};
+
 connection.on("error", (error: PuryFiConnectionError) => {
-   console.log(error.message);
+   console.error("Connection error:", error.message);
+});
+
+connection.on("close", () => {
+   console.log("Connection to PuryFi closed");
+   console.log(
+      `Session summary: ${totalScans} scans, ${totalDetections} detections`
+   );
 });
 
 connection.once("open", async () => {
-   let { version, apiVersion } = await new Promise<{
+   // ── Handshake ──────────────────────────────────────────────────────
+
+   const { version, apiVersion } = await new Promise<{
       version: string;
       apiVersion: string;
    }>((resolve) => {
-      connection.on("message", "ready", function listener(payload) {
+      connection.on("message", "ready", (payload) => {
          const response = connection.handleReadyMessage(payload);
-         if (response.type === "ok") {
-            resolve(payload);
-         }
+         if (response.type === "ok") resolve(payload);
          return response;
       });
    });
 
-   console.log(
-      `Connected PuryFi ${version} with Plugins API ${apiVersion} is ready to receive messages`
-   );
+   console.log(`PuryFi ${version} (API ${apiVersion}) connected`);
 
-   /**
-    * The plugin sends a series of messages to PuryFi to set up the plugin's manifest, configuration, and request the necessary intents.
-    */
    await connection.sendMessage("setManifest", { manifest });
+   await connection.sendMessage("setConfiguration", { configuration });
 
-   await connection.sendMessage("setConfiguration", {
-      configuration,
-   });
+   // ── Request intents ────────────────────────────────────────────────
 
-   /**
-    * The plugin checks if the required intents are already granted by sending a "getIntents" message to PuryFi.
-    * If any of the required intents are not granted, the plugin sends a "requestIntents" message to request those intents from the user.
-    */
-   const response = await connection.sendMessage("getIntents", {});
+   const grantedResponse = await connection.sendMessage("getIntents", {});
 
-   if (!intents.every((intent) => response.intents.includes(intent))) {
+   if (
+      grantedResponse.type === "ok" &&
+      !intents.every((i) => grantedResponse.intents.includes(i))
+   ) {
       await new Promise<void>(async (resolve) => {
          connection.on(
             "message",
             "intentsGrant",
-            async function listener({ intents }) {
-               console.log("Received intentsGrant message", intents);
-               if (
-                  intents.every((intent) => response.intents.includes(intent))
-               ) {
-                  console.log("Required intents granted");
-
+            function listener({ intents: granted }) {
+               if (intents.every((i) => granted.includes(i))) {
+                  console.log("All required intents granted");
                   connection.off("message", "intentsGrant", listener);
-
                   resolve();
                }
             }
          );
 
-         await connection.sendMessage("requestIntents", {
-            intents,
-         });
+         await connection.sendMessage("requestIntents", { intents });
       });
    }
+
+   console.log("Plugin initialized — starting features\n");
+
+   // ── Handle configuration changes ──────────────────────────────────
+
+   connection.on("message", "configurationChange", (payload) => {
+      configuration = payload.configuration;
+      console.log(
+         `Config updated — threshold: ${configuration.scoreThreshold.value}, ` +
+            `faces: ${configuration.logFaces.value ? "on" : "off"}`
+      );
+   });
+
+   // ── Read initial state ────────────────────────────────────────────
+
+   const enabledRes = await connection.sendMessage("getState", {
+      path: "enabled",
+   });
+   if (enabledRes.type === "ok") {
+      console.log(
+         `PuryFi is ${enabledRes.value ? "enabled" : "disabled"}`
+      );
+   }
+
+   const userRes = await connection.sendMessage("getState", {
+      path: "user",
+   });
+   if (userRes.type === "ok" && userRes.value !== null) {
+      console.log(`User: ${userRes.value.username}`);
+   }
+
+   const wblistRes = await connection.sendMessage("getState", {
+      path: "wblistConfiguration",
+   });
+   if (wblistRes.type === "ok") {
+      console.log(
+         `List mode: ${wblistRes.value.mode}, ` +
+            `${wblistRes.value.whitelist.length} whitelist entries, ` +
+            `${wblistRes.value.blacklist.length} blacklist entries`
+      );
+   }
+
+   // ── Watch enabled state ───────────────────────────────────────────
+
+   await connection.sendMessage("watchState", { path: "enabled" });
+
+   connection.on("message", "stateChange", (payload) => {
+      if (payload.path === "enabled") {
+         console.log(
+            `\n[State] PuryFi ${payload.value ? "enabled" : "disabled"}`
+         );
+
+         if (payload.value) {
+            console.log("  Detection monitoring is active");
+         } else {
+            console.log("  Detection monitoring paused (PuryFi disabled)");
+         }
+      }
+   });
+
+   // ── Watch live media scans ────────────────────────────────────────
+
+   const watchRes = await connection.sendMessage("watchStaticMediaScans", {});
+   if (watchRes.type === "ok") {
+      console.log("Watching live media scans\n");
+   }
+
+   connection.on("message", "staticMediaScan", (payload) => {
+      totalScans++;
+
+      const threshold = configuration.scoreThreshold.value as number;
+      const includeFaces = configuration.logFaces.value as boolean;
+
+      // Filter detections by threshold and face preference
+      const relevant = payload.objects.filter((obj) => {
+         if (obj.score < threshold) return false;
+
+         // Skip face labels unless the user opted in
+         if (
+            !includeFaces &&
+            (obj.label === Label.FaceFemale || obj.label === Label.FaceMale)
+         ) {
+            return false;
+         }
+
+         return true;
+      });
+
+      if (relevant.length === 0) return;
+
+      totalDetections += relevant.length;
+
+      console.log(
+         `\n[Scan #${totalScans}] ${relevant.length} detection(s) above ${threshold} threshold:`
+      );
+
+      for (const obj of relevant) {
+         const labelName = Label[obj.label] ?? `Unknown(${obj.label})`;
+
+         // Track per-label counts
+         detectionsByLabel[obj.label] =
+            (detectionsByLabel[obj.label] ?? 0) + 1;
+
+         console.log(
+            `  ${labelName} — score: ${obj.score.toFixed(2)}, ` +
+               `position: (${obj.rect.x}, ${obj.rect.y}), ` +
+               `size: ${obj.rect.width}x${obj.rect.height}`
+         );
+      }
+
+      // Print running totals every 10 scans
+      if (totalScans % 10 === 0) {
+         console.log(`\n[Stats] After ${totalScans} scans:`);
+         console.log(`  Total detections: ${totalDetections}`);
+         for (const [label, count] of Object.entries(detectionsByLabel)) {
+            const labelName = Label[Number(label)] ?? `Unknown(${label})`;
+            console.log(`  ${labelName}: ${count}`);
+         }
+      }
+   });
 });
