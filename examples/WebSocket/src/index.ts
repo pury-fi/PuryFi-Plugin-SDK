@@ -36,7 +36,7 @@ const intents: Intent[] = [];
  * The configuration object defines the settings that the plugin can be configured with. In this example, there is a single configuration field called "exampleField" of type "number" with an initial value of 0.
  * In a real plugin, you would define configuration fields that are relevant to your plugin's functionality, allowing users to customize the behavior of the plugin through the PuryFi interface.
  */
-const manifest: PluginManifest = {
+let manifest: PluginManifest = {
    name: "Example Plugin",
    version: "1.0.0",
    description: "An example plugin",
@@ -44,7 +44,7 @@ const manifest: PluginManifest = {
    website: null,
 };
 
-const configuration: PluginConfiguration = {
+let configuration: PluginConfiguration = {
    exampleField: {
       value: 0,
       type: "number",
@@ -73,7 +73,7 @@ connection.once("open", async () => {
    });
 
    console.log(
-      `Connected PuryFi ${version} with Plugins API ${apiVersion} is ready to receive messages`
+      `Connected PuryFi ${version} with plugins API ${apiVersion} is ready to receive messages`
    );
 
    /**
@@ -98,6 +98,11 @@ connection.once("open", async () => {
          }
          return response;
       });
+
+   connection.on("message", "configurationChange", async (payload) => {
+      console.log("Configuration changed: ", payload.configuration);
+      configuration = payload.configuration;
+   });
 
    /**
     * The plugin checks if the required intents are already granted by sending a "getIntents" message to PuryFi.
