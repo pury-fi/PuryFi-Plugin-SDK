@@ -1,5 +1,5 @@
 {
-   "name": "puryfi-plugin-sdk",
+   "name": "@puryfi/puryfi-plugin-sdk",
    "version": "1.0.0",
    "description": "SDK for developing PuryFi plugins",
    "license": "ISC",
@@ -8,6 +8,9 @@
    "main": "./dist/cjs/core/index.cjs",
    "module": "./dist/esm/core/index.js",
    "types": "./dist/esm/core/index.d.ts",
+   "publishConfig": {
+      "access": "public"
+   },
    "exports": {
       ".": {
          "types": "./dist/esm/core/index.d.ts",
