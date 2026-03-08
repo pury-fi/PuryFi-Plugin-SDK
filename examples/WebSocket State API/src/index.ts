@@ -77,12 +77,11 @@ connection.once("open", async () => {
       });
    });
 
-   console.log(
-      `PuryFi ${version} (API ${apiVersion}) connected`
-   );
+   console.log(`PuryFi ${version} (API ${apiVersion}) connected`);
 
    await connection.sendMessage("setManifest", { manifest }).then((res) => {
-      if (res.type === "error") throw new Error("Failed to set manifest");
+      if (res.type === "error")
+         throw new Error(`Failed to set manifest: ${res.message}`);
    });
 
    await connection
@@ -131,14 +130,19 @@ connection.once("open", async () => {
       configuration = payload.configuration;
 
       // React to specific field changes
-      if (oldConfig.autoEnableOnLock.value !== configuration.autoEnableOnLock.value) {
+      if (
+         oldConfig.autoEnableOnLock.value !==
+         configuration.autoEnableOnLock.value
+      ) {
          console.log(
             `Auto-enable on lock: ${configuration.autoEnableOnLock.value ? "ON" : "OFF"}`
          );
       }
 
       if (oldConfig.blockedSite.value !== configuration.blockedSite.value) {
-         console.log(`Blocked site updated to: ${configuration.blockedSite.value}`);
+         console.log(
+            `Blocked site updated to: ${configuration.blockedSite.value}`
+         );
       }
    });
 
@@ -148,7 +152,9 @@ connection.once("open", async () => {
       path: "enabled",
    });
    if (enabledRes.type === "ok") {
-      console.log(`PuryFi is currently ${enabledRes.value ? "enabled" : "disabled"}`);
+      console.log(
+         `PuryFi is currently ${enabledRes.value ? "enabled" : "disabled"}`
+      );
    }
 
    const userRes = await connection.sendMessage("getState", {
@@ -164,9 +170,13 @@ connection.once("open", async () => {
       path: "lockConfiguration",
    });
    if (lockRes.type === "ok" && lockRes.value !== null) {
-      console.log(`Lock active since ${new Date(lockRes.value.startTime).toLocaleString()}`);
+      console.log(
+         `Lock active since ${new Date(lockRes.value.startTime).toLocaleString()}`
+      );
       if (lockRes.value.timer) {
-         console.log(`Timer lock expires at ${new Date(lockRes.value.timer.endTime).toLocaleString()}`);
+         console.log(
+            `Timer lock expires at ${new Date(lockRes.value.timer.endTime).toLocaleString()}`
+         );
       }
       if (lockRes.value.password) {
          console.log("Password lock is active");

@@ -400,7 +400,7 @@ Error names vary by message type but include:
 | Error Name | Description |
 |------------|-------------|
 | `internalError` | Something went wrong inside PuryFi |
-| `invalidMessage` | The message payload was malformed |
+| `invalidMessage` | The message was malformed |
 | `missingIntents` | The plugin hasn't been granted the required intents |
 | `unavailablePath` | The state path doesn't exist or is inaccessible |
 | `invalidImage` | The image data was invalid (media messages) |
