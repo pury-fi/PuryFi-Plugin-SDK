@@ -79,7 +79,8 @@ upstreamConnection.on("open", (connection) => {
       console.log(`PuryFi ${version} (API ${apiVersion}) connected`);
 
       await connection.sendMessage("setManifest", { manifest }).then((res) => {
-         if (res.type === "error") throw new Error("Failed to set manifest");
+         if (res.type === "error")
+            throw new Error(`Failed to set manifest: ${res.message}`);
       });
 
       await connection
