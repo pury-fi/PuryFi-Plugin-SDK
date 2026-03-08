@@ -1,17 +1,18 @@
 {
-   "name": "test",
+   "name": "websocket-example",
    "version": "1.0.0",
-   "description": "",
+   "description": "Example of a WebSocket-based plugin using the PuryFi Plugin SDK.",
    "license": "ISC",
    "author": "",
    "type": "module",
    "main": "index.js",
    "scripts": {
       "build": "tsc",
-      "watch": "tsc -w"
+      "watch": "tsc -w",
+      "start": "node src/index.ts"
    },
    "dependencies": {
-      "@puryfi/puryfi-plugin-sdk": "file:../../"
+      "@puryfi/plugin-sdk": "file:../../"
    },
    "devDependencies": {
       "ts-node": "^10.9.2"

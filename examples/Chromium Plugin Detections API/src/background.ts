@@ -1,12 +1,14 @@
-import PuryFiBrowser from "@puryfi/puryfi-plugin-sdk/browser";
+import PuryFiBrowser from "@puryfi/plugin-sdk/browser";
 import {
-   PluginConfiguration,
-   PluginManifest,
    PuryFiConnection,
    PuryFiConnectionError,
    Label,
-} from "@puryfi/puryfi-plugin-sdk";
-import type { Intent } from "@puryfi/puryfi-plugin-sdk";
+} from "@puryfi/plugin-sdk";
+import type {
+   PluginConfiguration,
+   PluginManifest,
+   Intent,
+} from "@puryfi/plugin-sdk";
 
 /**
  * Chromium Extension Example
@@ -84,12 +86,28 @@ connection.once("open", async () => {
 
    console.log(`PuryFi ${version} (API ${apiVersion}) connected`);
 
-   await connection.sendMessage("setManifest", { manifest });
-   await connection.sendMessage("setConfiguration", { configuration });
+   console.log(`PuryFi ${version} (API ${apiVersion}) connected`);
+
+   await connection.sendMessage("setManifest", { manifest }).then((res) => {
+      if (res.type === "error") throw new Error("Failed to set manifest");
+   });
+
+   await connection
+      .sendMessage("setConfiguration", { configuration })
+      .then((res) => {
+         if (res.type === "error")
+            throw new Error(`Failed to set configuration: ${res.message}`);
+      });
 
    // ── Request intents ────────────────────────────────────────────────
 
-   const grantedResponse = await connection.sendMessage("getIntents", {});
+   const grantedResponse = await connection
+      .sendMessage("getIntents", {})
+      .then((res) => {
+         if (res.type === "error")
+            throw new Error(`Failed to get intents: ${res.message}`);
+         return res;
+      });
 
    if (
       grantedResponse.type === "ok" &&
