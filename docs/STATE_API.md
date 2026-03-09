@@ -1,452 +1,488 @@
 # PuryFi State API Reference
 
-> Read, write, and watch PuryFi's internal state through `connection.sendMessage()`.
+> Read and write PuryFi's state.
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Reading State](#reading-state)
-- [Writing State](#writing-state)
-- [Watching State](#watching-state)
-- [State Tree](#state-tree)
-   - [enabled](#1-enabled)
-   - [lockConfiguration](#2-lockconfiguration)
-   - [wblistConfiguration](#3-wblistconfiguration)
-   - [user](#4-user)
+- [Intents](#intents)
+- [Messages](#messages)
+   - [`getState`](#getstate)
+   - [`setState`](#setstate)
+   - [`watchState`](#watchstate)
+   - [`unwatchState`](#unwatchstate)
+   - [`stateChange`](#statechange)
+- [Types](#types)
+   - [`State`](#state)
+   - [`LockConfiguration`](#lockconfiguration)
+   - [`LockConfigurationPassword`](#lockconfigurationpassword)
+   - [`LockConfigurationTimer`](#lockconfigurationtimer)
+   - [`LockConfigurationTimerPlus`](#lockconfigurationtimerplus)
+   - [`WblistConfiguration`](#wblistconfiguration)
+   - [`WblistEntry`](#wblistentry)
+   - [`User`](#user)
+   - [`UserSupportTier`](#usersupporttier)
 - [Quick Reference](#quick-reference)
 
----
 
 ## Overview
 
-The State API lets plugins read, write, and watch PuryFi's internal state using **dot-separated paths** like `lockConfiguration.timer.endTime`. Each path has an access level controlling which operations are allowed.
+The State API lets plugins read, write, and watch PuryFi's state using dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Each path has an access level controlling which operations are allowed.
 
-State operations are regular messages sent via `connection.sendMessage()`:
+Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming messages are received with `PuryFiConnection.on`.
 
-| Message        | Direction       | Description                               |
-| -------------- | --------------- | ----------------------------------------- |
-| `getState`     | Plugin → PuryFi | Read a value at a path                    |
-| `setState`     | Plugin → PuryFi | Write a value at a path                   |
-| `watchState`   | Plugin → PuryFi | Subscribe to changes at a path            |
-| `unwatchState` | Plugin → PuryFi | Unsubscribe from changes at a path        |
-| `stateChange`  | PuryFi → Plugin | Notification that a watched value changed |
+| Message        | Direction       | Description                                   |
+| -------------- | --------------- | --------------------------------------------- |
+| `getState`     | Plugin → PuryFi | Get the value at a path into state            |
+| `setState`     | Plugin → PuryFi | Set the value at a path into state            |
+| `watchState`   | Plugin → PuryFi | Subscribe to changes at a path into state     |
+| `unwatchState` | Plugin → PuryFi | Unsubscribe from changes at a path into state |
+| `stateChange`  | PuryFi → Plugin | Notify of a value change in state             |
 
-### Required Intents
+## Intents
 
-State paths are gated by intents. You must request the appropriate intents before accessing a path. See the [Intents section in the README](../README.md#intents) for the full list of available intents.
+See the [Intents section in the README](../README.md#intents) for the full list of intents.
 
-| Intent                     | Paths                                |
-| -------------------------- | ------------------------------------ |
-| `readEnabled`              | `enabled` (get, watch)               |
-| `writeEnabled`             | `enabled` (set)                      |
-| `readLockConfiguration`    | `lockConfiguration.*` (get, watch)   |
-| `writeLockConfiguration`   | `lockConfiguration.*` (set)          |
-| `readWBlistConfiguration`  | `wblistConfiguration.*` (get, watch) |
-| `writeWBlistConfiguration` | `wblistConfiguration.*` (set)        |
-| `readUser`                 | `user.*` (get, watch)                |
+| Intent                     | Enables                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| `readEnabled`              | `getState`, `watchState`, `unwatchState`, and `stateChange` on `enabled` path                |
+| `writeEnabled`             | `setState` on `enabled` path                                                                 |
+| `readLockConfiguration`    | `getState`, `watchState`, `unwatchState`, and `stateChange` on `lockConfiguration.*` paths   |
+| `writeLockConfiguration`   | `setState` on `lockConfiguration.*` paths                                                    |
+| `readWBlistConfiguration`  | `getState`, `watchState`, `unwatchState`, and `stateChange` on `wblistConfiguration.*` paths |
+| `writeWBlistConfiguration` | `setState` on `wblistConfiguration.*` paths                                                  |
+| `readUser`                 | `getState`, `watchState`, `unwatchState`, and `stateChange` on `user.*` paths                |
 
-### Access Levels
+## Messages
 
-Each path has an access level that determines which operations are allowed:
+## `getState`
 
-| Access         | `getState` | `setState` | Description                 |
-| -------------- | :--------: | :--------: | --------------------------- |
-| **read-write** |     ✅     |     ✅     | Full access                 |
-| **read-only**  |     ✅     |     ❌     | Can be read but not written |
-| **write-only** |     ❌     |     ✅     | Can be written but not read |
+Get the value at a path into state. See the type [State](#state) for all paths, and the types and access levels at each path.
 
----
+### Arguments
 
-## Reading State
+```typescript
+{
+   path: string; // The dot-separated path into state at which to get.
+}
+```
 
-Use `getState` to read a value at a path. The response includes a typed `value` on success.
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+   value: unknown; // The value at the passed path. The type depends on the passed path. No-read properties are omitted.
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" |
+      "invalidMessage" |
+      "missingIntents" |
+      "unavailablePath";
+   message: string;
+}
+```
+
+| Error Name        | Description                                                 |
+| ----------------- | ----------------------------------------------------------- |
+| `unavailablePath` | A value somewhere along the path is null                    |
+| `missingIntents`  | The required read intent for this path has not been granted |
+| `invalidMessage`  | The message was malformed                                   |
+| `internalError`   | Something went wrong inside PuryFi                          |
+
+### Examples
+
+Read whether PuryFi is enabled and log it:
 
 ```typescript
 const res = await connection.sendMessage("getState", { path: "enabled" });
 if (res.type === "ok") {
-   console.log("Enabled:", res.value); // boolean
+   if (res.value) {
+      console.log("PuryFi is enabled");
+   } else {
+      console.log("PuryFi is disabled");
+   }
 }
 ```
 
-When reading an object path, write-only fields are omitted from the response:
+Read the whitelist/blacklist configuration mode and log it:
 
 ```typescript
 const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration",
-});
-if (res.type === "ok" && res.value !== null) {
-   // res.value.password?.secret is omitted (write-only)
-   console.log("Lock start:", res.value.startTime);
-}
-```
-
-### Error Responses
-
-```typescript
-if (res.type === "error") {
-   // res.name: "internalError" | "invalidMessage" | "missingIntents" | "unavailablePath"
-   console.error(res.name, res.message);
-}
-```
-
----
-
-## Writing State
-
-Use `setState` to write a value at a path.
-
-```typescript
-const res = await connection.sendMessage("setState", {
    path: "wblistConfiguration.mode",
-   value: "whitelist",
 });
-if (res.type === "error") {
-   console.error(res.name, res.message);
+if (res.type === "ok") {
+   console.log(
+      `The whitelist/blacklist configuration mode is set to ${res.value}`
+   );
 }
 ```
 
----
-
-## Watching State
-
-Subscribe to real-time change notifications for a path using `watchState`. When the value changes, PuryFi sends a `stateChange` message.
-
-```typescript
-// Subscribe
-await connection.sendMessage("watchState", { path: "enabled" });
-
-// Handle changes
-connection.on("message", "stateChange", (payload) => {
-   console.log(`${payload.path} changed to`, payload.value);
-});
-
-// Unsubscribe
-await connection.sendMessage("unwatchState", { path: "enabled" });
-```
-
-The `stateChange` payload contains:
-
-- `path` — the state path that changed
-- `value` — the new value (with write-only fields omitted for object paths)
-
----
-
-## State Tree
-
-### 1. `enabled`
-
-Whether PuryFi's content filtering is currently active.
-
-|             |                                |
-| ----------- | ------------------------------ |
-| **Path**    | `enabled`                      |
-| **Type**    | `boolean`                      |
-| **Access**  | read-write                     |
-| **Intents** | `readEnabled` / `writeEnabled` |
-
-```typescript
-// Read
-const res = await connection.sendMessage("getState", { path: "enabled" });
-// res.value: boolean
-
-// Write
-await connection.sendMessage("setState", { path: "enabled", value: true });
-```
-
----
-
-### 2. `lockConfiguration`
-
-The active lock configuration. `null` when no lock is active. Contains lock type details and metadata.
-
-|             |                                                    |
-| ----------- | -------------------------------------------------- |
-| **Path**    | `lockConfiguration`                                |
-| **Type**    | `object \| null`                                   |
-| **Access**  | read-write                                         |
-| **Intents** | `readLockConfiguration` / `writeLockConfiguration` |
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration",
-});
-if (res.type === "ok" && res.value !== null) {
-   console.log("Lock started at:", res.value.startTime);
-}
-```
-
-**Read-view shape** (write-only fields omitted):
-
-```typescript
-{
-   password: null | {
-      // secret is write-only — omitted from reads
-   },
-   timer: null | {
-      endTime: number
-   },
-   timerPlus: null | {
-      timesPerLabel: Record<number, number>
-   },
-   emergencyClientToken: number,
-   startTime: number
-}
-```
-
-#### All Paths
-
-| Path                                        | Type                     | `get` | `set` |
-| ------------------------------------------- | ------------------------ | :---: | :---: |
-| `lockConfiguration`                         | `object \| null`         |  ✅   |  ✅   |
-| `lockConfiguration.password`                | `object \| null`         |  ✅   |  ✅   |
-| `lockConfiguration.password.secret`         | `string`                 |  ❌   |  ✅   |
-| `lockConfiguration.timer`                   | `object \| null`         |  ✅   |  ✅   |
-| `lockConfiguration.timer.endTime`           | `number`                 |  ✅   |  ✅   |
-| `lockConfiguration.timerPlus`               | `object \| null`         |  ✅   |  ✅   |
-| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` |  ✅   |  ✅   |
-| `lockConfiguration.emergencyClientToken`    | `number`                 |  ✅   |  ❌   |
-| `lockConfiguration.startTime`               | `number`                 |  ✅   |  ❌   |
-
----
-
-#### `lockConfiguration.password`
-
-The password lock configuration. `null` when the lock is not password-based.
+Read the mode of the whitelist/blacklist configuration and log it:
 
 ```typescript
 const res = await connection.sendMessage("getState", {
    path: "lockConfiguration.password",
 });
-// res.value: null | { } (secret is write-only and omitted)
-```
-
-#### `lockConfiguration.password.secret`
-
-The password secret. **Write-only** — can be set but never read.
-
-```typescript
-await connection.sendMessage("setState", {
-   path: "lockConfiguration.password.secret",
-   value: "new-secret",
-});
-```
-
-#### `lockConfiguration.timer`
-
-The timer lock configuration. `null` when the lock is not timer-based.
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.timer",
-});
-// res.value: null | { endTime: number }
-```
-
-#### `lockConfiguration.timer.endTime`
-
-Unix timestamp (ms) when the timer lock expires.
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.timer.endTime",
-});
-// res.value: number
-
-await connection.sendMessage("setState", {
-   path: "lockConfiguration.timer.endTime",
-   value: Date.now() + 3600000,
-});
-```
-
-#### `lockConfiguration.timerPlus`
-
-The timer-plus lock configuration. `null` when the lock does not use timer-plus mode.
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.timerPlus",
-});
-// res.value: null | { timesPerLabel: Record<number, number> }
-```
-
-#### `lockConfiguration.timerPlus.timesPerLabel`
-
-A map of label IDs to remaining time values for the timer-plus lock.
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.timerPlus.timesPerLabel",
-});
-// res.value: Record<number, number>
-```
-
-#### `lockConfiguration.emergencyClientToken`
-
-A numeric token used for emergency unlock flows. **Read-only.**
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.emergencyClientToken",
-});
-// res.value: number
-```
-
-#### `lockConfiguration.startTime`
-
-Unix timestamp (ms) of when the lock was activated. **Read-only.**
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "lockConfiguration.startTime",
-});
-// res.value: number
-```
-
----
-
-### 3. `wblistConfiguration`
-
-The whitelist/blacklist configuration.
-
-|             |                                                        |
-| ----------- | ------------------------------------------------------ |
-| **Path**    | `wblistConfiguration`                                  |
-| **Type**    | `object`                                               |
-| **Access**  | read-write                                             |
-| **Intents** | `readWBlistConfiguration` / `writeWBlistConfiguration` |
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "wblistConfiguration",
-});
-// res.value: { mode, whitelist, blacklist }
-```
-
-#### All Paths
-
-| Path                            | Type                         | `get` | `set` |
-| ------------------------------- | ---------------------------- | :---: | :---: |
-| `wblistConfiguration`           | `object`                     |  ✅   |  ✅   |
-| `wblistConfiguration.mode`      | `"whitelist" \| "blacklist"` |  ✅   |  ✅   |
-| `wblistConfiguration.whitelist` | `Array<{ mode, value }>`     |  ✅   |  ✅   |
-| `wblistConfiguration.blacklist` | `Array<{ mode, value }>`     |  ✅   |  ✅   |
-
----
-
-#### `wblistConfiguration.mode`
-
-Whether the list operates as a whitelist or a blacklist.
-
-```typescript
-const res = await connection.sendMessage("getState", {
-   path: "wblistConfiguration.mode",
-});
-// res.value: "whitelist" | "blacklist"
-
-await connection.sendMessage("setState", {
-   path: "wblistConfiguration.mode",
-   value: "whitelist",
-});
-```
-
-#### `wblistConfiguration.whitelist`
-
-Array of whitelist entries. Each entry has a matching mode and a value.
-
-```typescript
-await connection.sendMessage("setState", {
-   path: "wblistConfiguration.whitelist",
-   value: [
-      { mode: "text", value: "example.com" },
-      { mode: "regex", value: ".*\\.safe\\.org" },
-   ],
-});
-```
-
-#### `wblistConfiguration.blacklist`
-
-Array of blacklist entries. Same shape as whitelist entries.
-
-```typescript
-await connection.sendMessage("setState", {
-   path: "wblistConfiguration.blacklist",
-   value: [{ mode: "text", value: "bad-site.com" }],
-});
-```
-
----
-
-### 4. `user`
-
-The currently logged-in user. `null` when no user is signed in. **Entirely read-only.**
-
-|             |                  |
-| ----------- | ---------------- |
-| **Path**    | `user`           |
-| **Type**    | `object \| null` |
-| **Access**  | read-only        |
-| **Intents** | `readUser`       |
-
-```typescript
-const res = await connection.sendMessage("getState", { path: "user" });
-if (res.type === "ok" && res.value !== null) {
-   console.log("Username:", res.value.username);
-   console.log("Support tier:", res.value.supportTier.name);
-}
-```
-
-**Shape:**
-
-```typescript
-{
-   username: string,
-   supportTier: {
-      level: number | null,
-      name: string
+if (res.type === "ok") {
+   if (res?.value != null) {
+      // Note that LockConfigurationPassword.secret is no-read, so it is ommited from the returned value.
+      console.log("A lock with a password is set");
+   } else {
+      console.log("No lock with a password is set");
    }
 }
 ```
 
-#### All Paths
+## `setState`
 
-| Path                     | Type             | `get` | `set` |
-| ------------------------ | ---------------- | :---: | :---: |
-| `user`                   | `object \| null` |  ✅   |  ❌   |
-| `user.username`          | `string`         |  ✅   |  ❌   |
-| `user.supportTier`       | `object`         |  ✅   |  ❌   |
-| `user.supportTier.level` | `number \| null` |  ✅   |  ❌   |
-| `user.supportTier.name`  | `string`         |  ✅   |  ❌   |
+Set the value at a path into state. See the type [State](#state) for all paths, and the types and access levels at each path.
 
----
+### Arguments
 
-## Quick Reference
+```typescript
+{
+   path: string; // The dot-separated path into state at which to set.
+   value: unknown; // The value to set at the passed path. The type depends on the passed path. No-write properties must be omitted.
+}
+```
 
-### All Paths — Access Matrix
+### Return
 
-| Path                                        | Type                         | `get` | `set` |
-| ------------------------------------------- | ---------------------------- | :---: | :---: |
-| `enabled`                                   | `boolean`                    |  ✅   |  ✅   |
-| `lockConfiguration`                         | `object \| null`             |  ✅   |  ✅   |
-| `lockConfiguration.password`                | `object \| null`             |  ✅   |  ✅   |
-| `lockConfiguration.password.secret`         | `string`                     |  ❌   |  ✅   |
-| `lockConfiguration.timer`                   | `object \| null`             |  ✅   |  ✅   |
-| `lockConfiguration.timer.endTime`           | `number`                     |  ✅   |  ✅   |
-| `lockConfiguration.timerPlus`               | `object \| null`             |  ✅   |  ✅   |
-| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>`     |  ✅   |  ✅   |
-| `lockConfiguration.emergencyClientToken`    | `number`                     |  ✅   |  ❌   |
-| `lockConfiguration.startTime`               | `number`                     |  ✅   |  ❌   |
-| `wblistConfiguration`                       | `object`                     |  ✅   |  ✅   |
-| `wblistConfiguration.mode`                  | `"whitelist" \| "blacklist"` |  ✅   |  ✅   |
-| `wblistConfiguration.whitelist`             | `Array<{ mode, value }>`     |  ✅   |  ✅   |
-| `wblistConfiguration.blacklist`             | `Array<{ mode, value }>`     |  ✅   |  ✅   |
-| `user`                                      | `object \| null`             |  ✅   |  ❌   |
-| `user.username`                             | `string`                     |  ✅   |  ❌   |
-| `user.supportTier`                          | `object`                     |  ✅   |  ❌   |
-| `user.supportTier.level`                    | `number \| null`             |  ✅   |  ❌   |
-| `user.supportTier.name`                     | `string`                     |  ✅   |  ❌   |
+**Success:**
 
-### Notes
+```typescript
+{
+   type: "ok";
+}
+```
 
-- **Nullable paths**: `lockConfiguration` and `user` are `null` when no lock is active or no user is signed in, respectively. Sub-paths under `lockConfiguration` like `password`, `timer`, and `timerPlus` are `null` when that lock type is not in use.
-- **Nested reads**: When you `getState` on an object path, write-only fields within it are omitted from the response.
-- **Type safety**: All paths, operations, values, and access levels are fully type-checked at compile time. TypeScript prevents reading write-only paths and writing to read-only paths.
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" |
+      "invalidMessage" |
+      "missingIntents" |
+      "unavailablePath";
+   message: string;
+}
+```
+
+| Error Name        | Description                                                  |
+| ----------------- | ------------------------------------------------------------ |
+| `unavailablePath` | A value somewhere along the path is null                     |
+| `missingIntents`  | The required write intent for this path has not been granted |
+| `invalidMessage`  | The message was malformed                                    |
+| `internalError`   | Something went wrong inside PuryFi                           |
+
+### Examples
+
+Enable PuryFi:
+
+```typescript
+await connection.sendMessage("setState", { path: "enabled", value: true });
+```
+
+Set a lock with a password:
+
+```typescript
+// Note that LockConfiguration.emergencyClientToken and LockConfiguration.startTime are no-write, so they are omitted from the passed value.
+await connection.sendMessage("setState", {
+   path: "lockConfiguration",
+   value: {
+      password: {
+         secret: "00000",
+      },
+      timer: null,
+      timerPlus: null,
+   },
+});
+```
+
+## `watchState`
+
+Subscribe to value change events at a path into state. Refer to [`unwatchState`](#unwatchstate) for the message to unsubscribe, and [`stateChange`](#statechange) for the message received when the value at the path changes.
+
+### Arguments
+
+```typescript
+{
+   path: string; // The dot-separated path into state at which to start watching.
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingIntents";
+   message: string;
+}
+```
+
+| Error Name       | Description                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| `missingIntents` | The required read intent for this path has not been granted |
+| `invalidMessage` | The message was malformed                                   |
+| `internalError`  | Something went wrong inside PuryFi                          |
+
+### Examples
+
+Refer to [`stateChange`](#statechange) for examples.
+
+## `unwatchState`
+
+Unsubscribe from value change events at a path into state. Refer to [`watchState`](#watchstate) for the message to subscribe, and [`stateChange`](#statechange) for the message received when the value at the path changes.
+
+### Arguments
+
+```typescript
+{
+   path: string; // The dot-separated path into state at which to stop watching.
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingIntents";
+   message: string;
+}
+```
+
+| Error Name       | Description                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| `missingIntents` | The required read intent for this path has not been granted |
+| `invalidMessage` | The message was malformed                                   |
+| `internalError`  | Something went wrong inside PuryFi                          |
+
+### Examples
+
+Refer to [`stateChange`](#statechange) for examples.
+
+## `stateChange`
+
+Received when the value at a watched path into state changes. Refer to [`watchState`](#watchstate) for the message to subscribe, and [`unwatchState`](#unwatchstate) for the message to unsubscribe.
+
+### Arguments
+
+```typescript
+{
+   path: string; // The dot-separated path into state at which a value changed.
+   value: unknown; // The new value at the path. The type depends on the path. No-read properties are omitted.
+}
+```
+
+### Examples
+
+Subscribe to change events of the end time of the lock configuration timer, log the next 10 events, then unsubscribe:
+
+```typescript
+await connection.sendMessage("watchState", {
+   path: "lockConfiguration.timer.endTime",
+});
+
+let count = 0;
+connection.on("message", "stateChange", async function listener({ objects }) {
+   if (objects.path === "lockConfiguration.timer.endTime") {
+      console.log(
+         `The end time of the lock configuration timer changed to ${objects.value}`
+      );
+
+      count++;
+      if (count >= 10) {
+         await connection.sendMessage("unwatchState", {
+            path: "lockConfiguration.timer.endTime",
+         });
+         connection.off("message", "stateChange", listener);
+      }
+   }
+});
+```
+
+## Types
+
+## `State`
+
+The root state object. Paths passed to `getState`, `setState`, `watchState`, and `unwatchState` are dot-separated paths into this type.
+
+```typescript
+{
+   enabled: boolean; // Whether PuryFi is enabled.
+   lockConfiguration: LockConfiguration | null; // The configured lock if any.
+   wblistConfiguration: WblistConfiguration; // The configured whitelist/blacklist.
+   user: User | null; // The logged-in user if any.
+}
+```
+
+### Access Levels
+
+| Key                   | `read` | `write` |
+| --------------------- | :----: | :-----: |
+| `enabled`             |   ✅   |   ✅    |
+| `lockConfiguration`   |   ✅   |   ✅    |
+| `wblistConfiguration` |   ✅   |   ✅    |
+| `user`                |   ✅   |   ❌    |
+
+## `LockConfiguration`
+
+```typescript
+{
+   password: LockConfigurationPassword | null; // The configured password if any.
+   timer: LockConfigurationTimer | null; // The configured timer if any.
+   timerPlus: LockConfigurationTimerPlus | null; // The configured timer plus if any.
+   emergencyClientToken: number; // The client token used for emergency unlocks.
+   startTime: number; // The unix timestamp in miliseconds of when the lock was set.
+}
+```
+
+### Access Levels
+
+| Key                    | `read` | `write` |
+| ---------------------- | :----: | :-----: |
+| `password`             |   ✅   |   ✅    |
+| `timer`                |   ✅   |   ✅    |
+| `timerPlus`            |   ✅   |   ✅    |
+| `emergencyClientToken` |   ✅   |   ❌    |
+| `startTime`            |   ✅   |   ❌    |
+
+## `LockConfigurationPassword`
+
+```typescript
+{
+   secret: string; // The password secret.
+}
+```
+
+### Access Levels
+
+| Key      | `read` | `write` |
+| -------- | :----: | :-----: |
+| `secret` |   ❌   |   ✅    |
+
+## `LockConfigurationTimer`
+
+```typescript
+{
+   endTime: number; // The unix timestamp in miliseconds of when the timer will end.
+}
+```
+
+### Access Levels
+
+| Key       | `read` | `write` |
+| --------- | :----: | :-----: |
+| `endTime` |   ✅   |   ✅    |
+
+## `LockConfigurationTimerPlus`
+
+```typescript
+{
+   timesPerLabel: Record<number, number>; // The times added or substracted when objects of the given labels are detected as the user browses.
+}
+```
+
+### Access Levels
+
+| Key             | `read` | `write` |
+| --------------- | :----: | :-----: |
+| `timesPerLabel` |   ✅   |   ✅    |
+
+## `WblistConfiguration`
+
+```typescript
+{
+   mode: "whitelist" | "blacklist"; // Whether the whitelist or blacklist is active.
+   whitelist: WblistEntry[];        // The whitelist entries.
+   blacklist: WblistEntry[];        // The blacklist entries.
+}
+```
+
+### Access Levels
+
+| Key         | `read` | `write` |
+| ----------- | :----: | :-----: |
+| `mode`      |   ✅   |   ✅    |
+| `whitelist` |   ✅   |   ✅    |
+| `blacklist` |   ✅   |   ✅    |
+
+## `WblistEntry`
+
+```typescript
+{
+   mode: "text" | "regex"; // Whether the value is interpreted as plain text or as a regular expression.
+   value: string; // The plain text or regular expression to match.
+}
+```
+
+### Access Levels
+
+| Key     | `read` | `write` |
+| ------- | :----: | :-----: |
+| `mode`  |   ✅   |   ✅    |
+| `value` |   ✅   |   ✅    |
+
+## `User`
+
+```typescript
+{
+   username: string; // The user's username.
+   supportTier: UserSupportTier; // The user's support tier.
+}
+```
+
+### Access Levels
+
+| Key           | `read` | `write` |
+| ------------- | :----: | :-----: |
+| `username`    |   ✅   |   ❌    |
+| `supportTier` |   ✅   |   ❌    |
+
+## `UserSupportTier`
+
+```typescript
+{
+   level: number | null; // The tier level of support if any.
+   name: string; // The display name of the supported tier or lack of supporter tier.
+}
+```
+
+### Access Levels
+
+| Key     | `read` | `write` |
+| ------- | :----: | :-----: |
+| `level` |   ✅   |   ❌    |
+| `name`  |   ✅   |   ❌    |

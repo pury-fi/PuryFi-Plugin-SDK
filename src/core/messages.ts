@@ -275,11 +275,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name:
-              | "internalError"
-              | "invalidMessage"
-              | "missingIntents"
-              | "unavailablePath";
+           name: "internalError" | "invalidMessage" | "missingIntents";
            message: string;
         };
 
@@ -294,11 +290,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name:
-              | "internalError"
-              | "invalidMessage"
-              | "missingIntents"
-              | "unavailablePath";
+           name: "internalError" | "invalidMessage" | "missingIntents";
            message: string;
         };
 

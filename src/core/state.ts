@@ -198,9 +198,6 @@ export const StateAccess = {
                   },
                },
             },
-            unlockedMascots: {
-               access: "noWrite",
-            },
          },
       },
    },

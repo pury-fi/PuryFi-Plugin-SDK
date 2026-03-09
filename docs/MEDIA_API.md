@@ -19,10 +19,7 @@
 
 ## Overview
 
-The Media Processing API lets plugins interact with PuryFi's image scanning and censoring pipeline. The API has two uses:
-
-- Sending images for scanning or censoring.
-- Subscribing to scan events happening as the user browses.
+The Media Processing API lets plugins interact with PuryFi's image scanning and censoring pipeline.
 
 Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming messages are received with `PuryFiConnection.on`.
 
@@ -34,18 +31,20 @@ Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming mes
 | `unwatchStaticMediaScans` | Plugin → PuryFi | Unsubscribe from scan events |
 | `staticMediaScan`         | PuryFi → Plugin | Notify of a scan event       |
 
-## Relevant Intents
+## Intents
 
-See the [Intents section in the README](../README.md#intents) for the full list of available intents. The media-relevant intents are:
+See the [Intents section in the README](../README.md#intents) for the full list of intents.
 
-| Intent                  | Enables                                                               |
-| ----------------------- | --------------------------------------------------------------------- |
-| `requestMediaProcesses` | `scanStaticMedia`, `censorStaticMedia`                                |
-| `readMediaProcesses`    | `watchStaticMediaScans`, `unwatchStaticMediaScans`, `staticMediaScan` |
+| Intent                  | Enables                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `requestMediaProcesses` | `scanStaticMedia`, `censorStaticMedia`                                    |
+| `readMediaProcesses`    | `watchStaticMediaScans`, `unwatchStaticMediaScans`, and `staticMediaScan` |
 
 ## Messages
 
 ## `scanStaticMedia`
+
+Scan a static image.
 
 ### Arguments
 
@@ -102,6 +101,8 @@ if (res.type === "ok") {
 ```
 
 ## `censorStaticMedia`
+
+Censor a static image.
 
 ### Arguments
 
@@ -178,7 +179,7 @@ if (scanRes.type === "ok") {
 
 ## `watchStaticMediaScans`
 
-Subscribe to scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe, and [`staticMediaScan`](#staticmediascan) for the event message.
+Subscribe to scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe, and [`staticMediaScan`](#staticmediascan) for the message received when a scan happens.
 
 ### Return
 
@@ -212,7 +213,7 @@ Refer to [`staticMediaScan`](#staticmediascan) for examples.
 
 ## `unwatchStaticMediaScans`
 
-Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`staticMediaScan`](#staticmediascan) for the event message.
+Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`staticMediaScan`](#staticmediascan) for the message received when a scan happens.
 
 ### Return
 
@@ -246,7 +247,7 @@ Refer to [`staticMediaScan`](#staticmediascan) for examples.
 
 ## `staticMediaScan`
 
-Event received when a scan happens as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe.
+Received when a scan happens as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe.
 
 ### Arguments
 
@@ -260,27 +261,31 @@ Event received when a scan happens as the user browses. Refer to [`watchStaticMe
 
 Subscribe to static media scan events, log the next 10 events, then unsubscribe.
 
-````typescript
+```typescript
 await connection.sendMessage("watchStaticMediaScans", {});
 
 let count = 0;
-connection.on("message", "staticMediaScan", async function listener({ objects }) {
-   console.log(`${count}: Received scan event`);
-   for (const obj of objects) {
-      console.log(
-         `label=${obj.label} score=${obj.score} at (${obj.rect.x}, ${obj.rect.y}) ${obj.rect.width}x${obj.rect.height}`
-      );
-   }
+connection.on(
+   "message",
+   "staticMediaScan",
+   async function listener({ objects }) {
+      console.log(`${count}: Received scan event`);
+      for (const obj of objects) {
+         console.log(
+            `label=${obj.label} score=${obj.score} at (${obj.rect.x}, ${obj.rect.y}) ${obj.rect.width}x${obj.rect.height}`
+         );
+      }
 
-   count++;
-   if (count >= 10) {
-      console.log("Done receiving scan events");
+      count++;
+      if (count >= 10) {
+         console.log("Done receiving scan events");
 
-      connection.off("message", "staticMediaScan", listener);
-      await connection.sendMessage("unwatchStaticMediaScans", {});
+         connection.off("message", "staticMediaScan", listener);
+         await connection.sendMessage("unwatchStaticMediaScans", {});
+      }
    }
-});
-````
+);
+```
 
 ## Types
 
@@ -288,21 +293,21 @@ connection.on("message", "staticMediaScan", async function listener({ objects })
 
 ```typescript
 {
-   rect: Rect; // The coordinates of the object. The cordinates go from 0 to 1
-   label: number; // The "kind" of object detected. You can try mapping this to a [`Label`](#labels) for easier interpretation
-   score: number; // The confidence on the object being accurate. Goes from 0 to 1
-   id: number; // Unique ID of the object
+   rect: Rect; // The coordinates of the object. The cordinates go from 0 to 1.
+   label: number; // The "kind" of object detected. You can try mapping this to a [`Label`](#labels) for easier interpretation.
+   score: number; // The confidence on the object being accurate. Goes from 0 to 1.
+   id: number; // Unique ID of the object.
 }
-````
+```
 
 ## `Rect`
 
 ```typescript
 {
-   x: number; // The x coordinate
-   y: number; // The y coordinate
-   width: number; // The width
-   height: number; // The height
+   x: number; // The x coordinate.
+   y: number; // The y coordinate.
+   width: number; // The width.
+   height: number; // The height.
 }
 ```
 
