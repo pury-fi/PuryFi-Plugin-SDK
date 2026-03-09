@@ -219,7 +219,7 @@ interface Rect {
 Both types and the `Label` enum are exported from the SDK:
 
 ```typescript
-import { Object, Rect, Label } from "@puryfi/puryfi-plugin-sdk";
+import { Object, Rect, Label } from "@pury-fi/plugin-sdk";
 ```
 
 ### Validation Helpers
@@ -227,7 +227,7 @@ import { Object, Rect, Label } from "@puryfi/puryfi-plugin-sdk";
 The SDK exports type guard functions for runtime validation:
 
 ```typescript
-import { isObject, isRect } from "@puryfi/puryfi-plugin-sdk";
+import { isObject, isRect } from "@pury-fi/plugin-sdk";
 
 if (isObject(value)) {
    // value is Object
@@ -245,7 +245,7 @@ if (isRect(value)) {
 The `Label` enum maps numeric label values to body part identifiers. Use it to filter or interpret detection results.
 
 ```typescript
-import { Label } from "@puryfi/puryfi-plugin-sdk";
+import { Label } from "@pury-fi/plugin-sdk";
 
 // Filter to only face detections
 const faces = objects.filter(

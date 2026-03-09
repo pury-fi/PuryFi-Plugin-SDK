@@ -33,16 +33,16 @@ All messages use [msgpack](https://msgpack.org/) encoding.
 ## Installation
 
 ```bash
-npm install @puryfi/puryfi-plugin-sdk
+npm install @pury-fi/plugin-sdk
 ```
 
 The SDK ships three entry points:
 
 | Import | Use |
 |--------|-----|
-| `@puryfi/puryfi-plugin-sdk` | Core types and `PuryFiConnection` |
-| `@puryfi/puryfi-plugin-sdk/socket` | `PuryFiSocket` upstream for standalone plugins |
-| `@puryfi/puryfi-plugin-sdk/browser` | `PuryFiBrowser` upstream for browser extension plugins |
+| `@pury-fi/plugin-sdk` | Core types and `PuryFiConnection` |
+| `@pury-fi/plugin-sdk/socket` | `PuryFiSocket` upstream for standalone plugins |
+| `@pury-fi/plugin-sdk/browser` | `PuryFiBrowser` upstream for browser extension plugins |
 
 ## Quick Start
 
@@ -53,7 +53,7 @@ Choose the upstream that matches your plugin type.
 **WebSocket (standalone plugin):**
 
 ```typescript
-import PuryFiSocket from "@puryfi/puryfi-plugin-sdk/socket";
+import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
 
 const upstream = new PuryFiSocket(8080);
 ```
@@ -72,7 +72,7 @@ const upstream = new PuryFiSocket(8080, {
 **Browser Extension:**
 
 ```typescript
-import PuryFiBrowser from "@puryfi/puryfi-plugin-sdk/browser";
+import PuryFiBrowser from "@pury-fi/plugin-sdk/browser";
 
 const upstream = new PuryFiBrowser();
 ```
@@ -82,7 +82,7 @@ Uses runtime messaging on Firefox and a BroadcastChannel bridge on Chromium. No 
 ### Step 2 — Create a Connection
 
 ```typescript
-import { PuryFiConnection } from "@puryfi/puryfi-plugin-sdk";
+import { PuryFiConnection } from "@pury-fi/plugin-sdk";
 
 const connection = new PuryFiConnection(upstream);
 ```
@@ -92,7 +92,7 @@ const connection = new PuryFiConnection(upstream);
 When PuryFi connects, it sends a `ready` message containing its version and API version. Your plugin must respond to confirm compatibility, then send its manifest and configuration.
 
 ```typescript
-import type { PluginManifest, PluginConfiguration } from "@puryfi/puryfi-plugin-sdk";
+import type { PluginManifest, PluginConfiguration } from "@pury-fi/plugin-sdk";
 
 const manifest: PluginManifest = {
    name: "My Plugin",
@@ -134,7 +134,7 @@ connection.once("open", async () => {
 Intents are permissions your plugin needs. The user must approve them in the PuryFi UI. See [Intents](#intents) for the full list.
 
 ```typescript
-import type { Intent } from "@puryfi/puryfi-plugin-sdk";
+import type { Intent } from "@pury-fi/plugin-sdk";
 
 const intents: Intent[] = ["readEnabled", "readWBlistConfiguration"];
 
@@ -411,16 +411,16 @@ Error names vary by message type but include:
 A full WebSocket plugin that connects, handshakes, sets up configuration, and handles intents:
 
 ```typescript
-import PuryFiSocket from "@puryfi/puryfi-plugin-sdk/socket";
+import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
 import {
    PuryFiConnection,
    PuryFiConnectionError,
-} from "@puryfi/puryfi-plugin-sdk";
+} from "@pury-fi/plugin-sdk";
 import type {
    PluginManifest,
    PluginConfiguration,
    Intent,
-} from "@puryfi/puryfi-plugin-sdk";
+} from "@pury-fi/plugin-sdk";
 
 const upstream = new PuryFiSocket(8080);
 const connection = new PuryFiConnection(upstream);

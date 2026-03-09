@@ -1,10 +1,10 @@
-import PuryFiSocket from "@puryfi/plugin-sdk/socket";
-import { PuryFiConnection, PuryFiConnectionError } from "@puryfi/plugin-sdk";
+import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
+import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginConfiguration,
    PluginManifest,
    Intent,
-} from "@puryfi/plugin-sdk";
+} from "@pury-fi/plugin-sdk";
 
 /**
  * WebSocket Boilerplate

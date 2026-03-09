@@ -1,5 +1,5 @@
 {
-   "name": "@puryfi/plugin-sdk",
+   "name": "@pury-fi/plugin-sdk",
    "version": "1.0.0",
    "description": "SDK for developing PuryFi plugins",
    "license": "ISC",
