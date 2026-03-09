@@ -8,7 +8,7 @@ import { PuryFiConnection, PuryFiConnectionError } from "../core/index.js";
 
 export type SocketEvents = {
    error: (error: PuryFiConnectionError) => void;
-   open: (connection: PuryFiConnection) => void;
+   connection: (connection: PuryFiConnection) => void;
 };
 
 export default class PuryFiSocket {
@@ -111,7 +111,7 @@ export default class PuryFiSocket {
 
          ws.binaryType = "arraybuffer";
          let instance = new PuryFiSocketInstance(ws, this.debug);
-         this.emit("open", new PuryFiConnection(instance));
+         this.emit("connection", new PuryFiConnection(instance));
          instance.open();
       });
    }

@@ -17,7 +17,7 @@ upstreamConnection.setDebug(true);
 /**
  * When a client connects to this WebSocket server, we create a new PuryFiConnection instance for that client and set up the handshake and plugin initialization process. You can have multiple clients connect to this server, and each will have its own PuryFiConnection instance.
  */
-upstreamConnection.on("open", (connection) => {
+upstreamConnection.on("connection", (connection) => {
    console.log("Client connected to WebSocket plugin instance");
 
    connection.setDebug(true);

@@ -70,7 +70,7 @@ connection.on("close", () => {
    );
 });
 
-connection.once("open", async () => {
+connection.once("connection", async () => {
    // ── Handshake ──────────────────────────────────────────────────────
 
    const { version, apiVersion } = await new Promise<{

@@ -18,7 +18,7 @@ import type {
 
 const upstreamConnection = new PuryFiSocket(8080);
 upstreamConnection.setDebug(true);
-upstreamConnection.on("open", (connection) => {
+upstreamConnection.on("connection", (connection) => {
    console.log("Client connected to WebSocket plugin instance");
 
    connection.setDebug(true);
