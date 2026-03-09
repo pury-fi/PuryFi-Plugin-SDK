@@ -12,7 +12,7 @@
       "start": "node src/index.ts"
    },
    "dependencies": {
-      "@puryfi/plugin-sdk": "file:../../"
+      "@pury-fi/plugin-sdk": "file:../../"
    },
    "devDependencies": {
       "ts-node": "^10.9.2"

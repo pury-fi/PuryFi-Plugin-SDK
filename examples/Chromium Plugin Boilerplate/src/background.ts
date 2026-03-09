@@ -1,13 +1,13 @@
-import PuryFiBrowser from "@puryfi/plugin-sdk/browser";
+import PuryFiBrowser from "@pury-fi/plugin-sdk/browser";
 import {
    PuryFiConnection,
    PuryFiConnectionError,
-} from "@puryfi/plugin-sdk";
+} from "@pury-fi/plugin-sdk";
 import type {
    PluginConfiguration,
    PluginManifest,
    Intent,
-} from "@puryfi/plugin-sdk";
+} from "@pury-fi/plugin-sdk";
 
 /**
  * Browser Plugin Boilerplate

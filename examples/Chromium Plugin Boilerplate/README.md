@@ -65,11 +65,11 @@ Fill in your intents, define your configuration, and add your logic after the `"
 
 ## Bridge Files
 
-> **Important:** The `bridge.html` and `bridge.js` files (in both `src/` and `public/`) handle binary messaging between the extension and PuryFi on Chromium. These files **must match the version of the SDK** you are using. When you update `@puryfi/plugin-sdk`, copy the latest bridge files from the SDK's `chromium/` folder into your project:
+> **Important:** The `bridge.html` and `bridge.js` files (in both `src/` and `public/`) handle binary messaging between the extension and PuryFi on Chromium. These files **must match the version of the SDK** you are using. When you update `@pury-fi/plugin-sdk`, copy the latest bridge files from the SDK's `chromium/` folder into your project:
 >
 > ```
-> node_modules/@puryfi/plugin-sdk/chromium/bridge.html → public/bridge.html
-> node_modules/@puryfi/plugin-sdk/chromium/bridge.js   → src/bridge.js
+> node_modules/@pury-fi/plugin-sdk/chromium/bridge.html → public/bridge.html
+> node_modules/@pury-fi/plugin-sdk/chromium/bridge.js   → src/bridge.js
 > ```
 >
 > Mismatched bridge files can cause silent connection failures.
