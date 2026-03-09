@@ -9,10 +9,10 @@
 - [Writing State](#writing-state)
 - [Watching State](#watching-state)
 - [State Tree](#state-tree)
-  - [enabled](#1-enabled)
-  - [lockConfiguration](#2-lockconfiguration)
-  - [wblistConfiguration](#3-wblistconfiguration)
-  - [user](#4-user)
+   - [enabled](#1-enabled)
+   - [lockConfiguration](#2-lockconfiguration)
+   - [wblistConfiguration](#3-wblistconfiguration)
+   - [user](#4-user)
 - [Quick Reference](#quick-reference)
 
 ---
@@ -23,38 +23,37 @@ The State API lets plugins read, write, and watch PuryFi's internal state using 
 
 State operations are regular messages sent via `connection.sendMessage()`:
 
-| Message | Direction | Description |
-|---------|-----------|-------------|
-| `getState` | Plugin → PuryFi | Read a value at a path |
-| `setState` | Plugin → PuryFi | Write a value at a path |
-| `watchState` | Plugin → PuryFi | Subscribe to changes at a path |
-| `unwatchState` | Plugin → PuryFi | Unsubscribe from changes at a path |
-| `stateChange` | PuryFi → Plugin | Notification that a watched value changed |
+| Message        | Direction       | Description                               |
+| -------------- | --------------- | ----------------------------------------- |
+| `getState`     | Plugin → PuryFi | Read a value at a path                    |
+| `setState`     | Plugin → PuryFi | Write a value at a path                   |
+| `watchState`   | Plugin → PuryFi | Subscribe to changes at a path            |
+| `unwatchState` | Plugin → PuryFi | Unsubscribe from changes at a path        |
+| `stateChange`  | PuryFi → Plugin | Notification that a watched value changed |
 
 ### Required Intents
 
 State paths are gated by intents. You must request the appropriate intents before accessing a path. See the [Intents section in the README](../README.md#intents) for the full list of available intents.
 
-| Intent | Paths |
-|--------|-------|
-| `readEnabled` | `enabled` (get, watch) |
-| `writeEnabled` | `enabled` (set) |
-| `readLockConfiguration` | `lockConfiguration.*` (get, watch) |
-| `writeLockConfiguration` | `lockConfiguration.*` (set) |
-| `readWBlistConfiguration` | `wblistConfiguration.*` (get, watch) |
-| `writeWBlistConfiguration` | `wblistConfiguration.*` (set) |
-| `readUser` | `user.*` (get, watch) |
+| Intent                     | Paths                                |
+| -------------------------- | ------------------------------------ |
+| `readEnabled`              | `enabled` (get, watch)               |
+| `writeEnabled`             | `enabled` (set)                      |
+| `readLockConfiguration`    | `lockConfiguration.*` (get, watch)   |
+| `writeLockConfiguration`   | `lockConfiguration.*` (set)          |
+| `readWBlistConfiguration`  | `wblistConfiguration.*` (get, watch) |
+| `writeWBlistConfiguration` | `wblistConfiguration.*` (set)        |
+| `readUser`                 | `user.*` (get, watch)                |
 
 ### Access Levels
 
 Each path has an access level that determines which operations are allowed:
 
-| Access | `getState` | `setState` | Description |
-|--------|:----------:|:----------:|-------------|
-| **read-write** | ✅ | ✅ | Full access |
-| **read-only** | ✅ | ❌ | Can be read but not written |
-| **write-only** | ❌ | ✅ | Can be written but the value is never returned |
-| **no access** | ❌ | ❌ | Completely inaccessible |
+| Access         | `getState` | `setState` | Description                 |
+| -------------- | :--------: | :--------: | --------------------------- |
+| **read-write** |     ✅     |     ✅     | Full access                 |
+| **read-only**  |     ✅     |     ❌     | Can be read but not written |
+| **write-only** |     ❌     |     ✅     | Can be written but not read |
 
 ---
 
@@ -126,6 +125,7 @@ await connection.sendMessage("unwatchState", { path: "enabled" });
 ```
 
 The `stateChange` payload contains:
+
 - `path` — the state path that changed
 - `value` — the new value (with write-only fields omitted for object paths)
 
@@ -137,11 +137,11 @@ The `stateChange` payload contains:
 
 Whether PuryFi's content filtering is currently active.
 
-| | |
-|---|---|
-| **Path** | `enabled` |
-| **Type** | `boolean` |
-| **Access** | read-write |
+|             |                                |
+| ----------- | ------------------------------ |
+| **Path**    | `enabled`                      |
+| **Type**    | `boolean`                      |
+| **Access**  | read-write                     |
 | **Intents** | `readEnabled` / `writeEnabled` |
 
 ```typescript
@@ -159,11 +159,11 @@ await connection.sendMessage("setState", { path: "enabled", value: true });
 
 The active lock configuration. `null` when no lock is active. Contains lock type details and metadata.
 
-| | |
-|---|---|
-| **Path** | `lockConfiguration` |
-| **Type** | `object \| null` |
-| **Access** | read-write |
+|             |                                                    |
+| ----------- | -------------------------------------------------- |
+| **Path**    | `lockConfiguration`                                |
+| **Type**    | `object \| null`                                   |
+| **Access**  | read-write                                         |
 | **Intents** | `readLockConfiguration` / `writeLockConfiguration` |
 
 ```typescript
@@ -176,6 +176,7 @@ if (res.type === "ok" && res.value !== null) {
 ```
 
 **Read-view shape** (write-only fields omitted):
+
 ```typescript
 {
    password: null | {
@@ -194,17 +195,17 @@ if (res.type === "ok" && res.value !== null) {
 
 #### All Paths
 
-| Path | Type | `get` | `set` |
-|------|------|:-----:|:-----:|
-| `lockConfiguration` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.password` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.password.secret` | `string` | ❌ | ✅ |
-| `lockConfiguration.timer` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.timer.endTime` | `number` | ✅ | ✅ |
-| `lockConfiguration.timerPlus` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` | ✅ | ✅ |
-| `lockConfiguration.emergencyClientToken` | `number` | ✅ | ❌ |
-| `lockConfiguration.startTime` | `number` | ✅ | ❌ |
+| Path                                        | Type                     | `get` | `set` |
+| ------------------------------------------- | ------------------------ | :---: | :---: |
+| `lockConfiguration`                         | `object \| null`         |  ✅   |  ✅   |
+| `lockConfiguration.password`                | `object \| null`         |  ✅   |  ✅   |
+| `lockConfiguration.password.secret`         | `string`                 |  ❌   |  ✅   |
+| `lockConfiguration.timer`                   | `object \| null`         |  ✅   |  ✅   |
+| `lockConfiguration.timer.endTime`           | `number`                 |  ✅   |  ✅   |
+| `lockConfiguration.timerPlus`               | `object \| null`         |  ✅   |  ✅   |
+| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` |  ✅   |  ✅   |
+| `lockConfiguration.emergencyClientToken`    | `number`                 |  ✅   |  ❌   |
+| `lockConfiguration.startTime`               | `number`                 |  ✅   |  ❌   |
 
 ---
 
@@ -307,11 +308,11 @@ const res = await connection.sendMessage("getState", {
 
 The whitelist/blacklist configuration.
 
-| | |
-|---|---|
-| **Path** | `wblistConfiguration` |
-| **Type** | `object` |
-| **Access** | read-write |
+|             |                                                        |
+| ----------- | ------------------------------------------------------ |
+| **Path**    | `wblistConfiguration`                                  |
+| **Type**    | `object`                                               |
+| **Access**  | read-write                                             |
 | **Intents** | `readWBlistConfiguration` / `writeWBlistConfiguration` |
 
 ```typescript
@@ -323,12 +324,12 @@ const res = await connection.sendMessage("getState", {
 
 #### All Paths
 
-| Path | Type | `get` | `set` |
-|------|------|:-----:|:-----:|
-| `wblistConfiguration` | `object` | ✅ | ✅ |
-| `wblistConfiguration.mode` | `"whitelist" \| "blacklist"` | ✅ | ✅ |
-| `wblistConfiguration.whitelist` | `Array<{ mode, value }>` | ✅ | ✅ |
-| `wblistConfiguration.blacklist` | `Array<{ mode, value }>` | ✅ | ✅ |
+| Path                            | Type                         | `get` | `set` |
+| ------------------------------- | ---------------------------- | :---: | :---: |
+| `wblistConfiguration`           | `object`                     |  ✅   |  ✅   |
+| `wblistConfiguration.mode`      | `"whitelist" \| "blacklist"` |  ✅   |  ✅   |
+| `wblistConfiguration.whitelist` | `Array<{ mode, value }>`     |  ✅   |  ✅   |
+| `wblistConfiguration.blacklist` | `Array<{ mode, value }>`     |  ✅   |  ✅   |
 
 ---
 
@@ -379,12 +380,12 @@ await connection.sendMessage("setState", {
 
 The currently logged-in user. `null` when no user is signed in. **Entirely read-only.**
 
-| | |
-|---|---|
-| **Path** | `user` |
-| **Type** | `object \| null` |
-| **Access** | read-only |
-| **Intents** | `readUser` |
+|             |                  |
+| ----------- | ---------------- |
+| **Path**    | `user`           |
+| **Type**    | `object \| null` |
+| **Access**  | read-only        |
+| **Intents** | `readUser`       |
 
 ```typescript
 const res = await connection.sendMessage("getState", { path: "user" });
@@ -395,6 +396,7 @@ if (res.type === "ok" && res.value !== null) {
 ```
 
 **Shape:**
+
 ```typescript
 {
    username: string,
@@ -407,13 +409,13 @@ if (res.type === "ok" && res.value !== null) {
 
 #### All Paths
 
-| Path | Type | `get` | `set` |
-|------|------|:-----:|:-----:|
-| `user` | `object \| null` | ✅ | ❌ |
-| `user.username` | `string` | ✅ | ❌ |
-| `user.supportTier` | `object` | ✅ | ❌ |
-| `user.supportTier.level` | `number \| null` | ✅ | ❌ |
-| `user.supportTier.name` | `string` | ✅ | ❌ |
+| Path                     | Type             | `get` | `set` |
+| ------------------------ | ---------------- | :---: | :---: |
+| `user`                   | `object \| null` |  ✅   |  ❌   |
+| `user.username`          | `string`         |  ✅   |  ❌   |
+| `user.supportTier`       | `object`         |  ✅   |  ❌   |
+| `user.supportTier.level` | `number \| null` |  ✅   |  ❌   |
+| `user.supportTier.name`  | `string`         |  ✅   |  ❌   |
 
 ---
 
@@ -421,27 +423,27 @@ if (res.type === "ok" && res.value !== null) {
 
 ### All Paths — Access Matrix
 
-| Path | Type | `get` | `set` |
-|------|------|:-----:|:-----:|
-| `enabled` | `boolean` | ✅ | ✅ |
-| `lockConfiguration` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.password` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.password.secret` | `string` | ❌ | ✅ |
-| `lockConfiguration.timer` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.timer.endTime` | `number` | ✅ | ✅ |
-| `lockConfiguration.timerPlus` | `object \| null` | ✅ | ✅ |
-| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>` | ✅ | ✅ |
-| `lockConfiguration.emergencyClientToken` | `number` | ✅ | ❌ |
-| `lockConfiguration.startTime` | `number` | ✅ | ❌ |
-| `wblistConfiguration` | `object` | ✅ | ✅ |
-| `wblistConfiguration.mode` | `"whitelist" \| "blacklist"` | ✅ | ✅ |
-| `wblistConfiguration.whitelist` | `Array<{ mode, value }>` | ✅ | ✅ |
-| `wblistConfiguration.blacklist` | `Array<{ mode, value }>` | ✅ | ✅ |
-| `user` | `object \| null` | ✅ | ❌ |
-| `user.username` | `string` | ✅ | ❌ |
-| `user.supportTier` | `object` | ✅ | ❌ |
-| `user.supportTier.level` | `number \| null` | ✅ | ❌ |
-| `user.supportTier.name` | `string` | ✅ | ❌ |
+| Path                                        | Type                         | `get` | `set` |
+| ------------------------------------------- | ---------------------------- | :---: | :---: |
+| `enabled`                                   | `boolean`                    |  ✅   |  ✅   |
+| `lockConfiguration`                         | `object \| null`             |  ✅   |  ✅   |
+| `lockConfiguration.password`                | `object \| null`             |  ✅   |  ✅   |
+| `lockConfiguration.password.secret`         | `string`                     |  ❌   |  ✅   |
+| `lockConfiguration.timer`                   | `object \| null`             |  ✅   |  ✅   |
+| `lockConfiguration.timer.endTime`           | `number`                     |  ✅   |  ✅   |
+| `lockConfiguration.timerPlus`               | `object \| null`             |  ✅   |  ✅   |
+| `lockConfiguration.timerPlus.timesPerLabel` | `Record<number, number>`     |  ✅   |  ✅   |
+| `lockConfiguration.emergencyClientToken`    | `number`                     |  ✅   |  ❌   |
+| `lockConfiguration.startTime`               | `number`                     |  ✅   |  ❌   |
+| `wblistConfiguration`                       | `object`                     |  ✅   |  ✅   |
+| `wblistConfiguration.mode`                  | `"whitelist" \| "blacklist"` |  ✅   |  ✅   |
+| `wblistConfiguration.whitelist`             | `Array<{ mode, value }>`     |  ✅   |  ✅   |
+| `wblistConfiguration.blacklist`             | `Array<{ mode, value }>`     |  ✅   |  ✅   |
+| `user`                                      | `object \| null`             |  ✅   |  ❌   |
+| `user.username`                             | `string`                     |  ✅   |  ❌   |
+| `user.supportTier`                          | `object`                     |  ✅   |  ❌   |
+| `user.supportTier.level`                    | `number \| null`             |  ✅   |  ❌   |
+| `user.supportTier.name`                     | `string`                     |  ✅   |  ❌   |
 
 ### Notes
 

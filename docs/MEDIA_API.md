@@ -1,27 +1,30 @@
 # PuryFi Media Processing API Reference
 
-> Scan and censor images through PuryFi's detection engine, and subscribe to real-time scan events.
+> Scan and censor images, and subscribe to scan events happening as the user browses.
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Required Intents](#required-intents)
-- [Scanning Images](#scanning-images)
-- [Censoring Images](#censoring-images)
-- [Watching Live Scans](#watching-live-scans)
-- [Detection Objects](#detection-objects)
-- [Labels](#labels)
-
----
+- [Relevant Intents](#relevant-intents)
+- [Messages](#messages)
+   - [`scanStaticMedia`](#scanstaticmedia)
+   - [`censorStaticMedia`](#censorstaticmedia)
+   - [`watchStaticMediaScans`](#watchstaticmediascans)
+   - [`unwatchStaticMediaScans`](#unwatchstaticmediascans)
+   - [`staticMediaScan`](#staticmediascan)
+- [Types](#types)
+   - [`Object`](#object)
+   - [`Rect`](#rect)
+   - [`Label`](#label)
 
 ## Overview
 
-The Media Processing API lets plugins interact with PuryFi's image scanning and censoring pipeline. There are two uses:
+The Media Processing API lets plugins interact with PuryFi's image scanning and censoring pipeline. The API has two uses:
 
-- Send images for scanning or censoring.
-- Subscribe to scan events happening as the user browses.
+- Sending images for scanning or censoring.
+- Subscribing to scan events happening as the user browses.
 
-All operations use `connection.sendMessage()`:
+Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming messages are received with `PuryFiConnection.on`.
 
 | Message                   | Direction       | Description                  |
 | ------------------------- | --------------- | ---------------------------- |
@@ -31,42 +34,24 @@ All operations use `connection.sendMessage()`:
 | `unwatchStaticMediaScans` | Plugin → PuryFi | Unsubscribe from scan events |
 | `staticMediaScan`         | PuryFi → Plugin | Notify of a scan event       |
 
----
+## Relevant Intents
 
-## Required Intents
-
-See the [Intents section in the README](../README.md#intents) for the full list of available intents. The media-related intents are:
+See the [Intents section in the README](../README.md#intents) for the full list of available intents. The media-relevant intents are:
 
 | Intent                  | Enables                                                               |
 | ----------------------- | --------------------------------------------------------------------- |
 | `requestMediaProcesses` | `scanStaticMedia`, `censorStaticMedia`                                |
 | `readMediaProcesses`    | `watchStaticMediaScans`, `unwatchStaticMediaScans`, `staticMediaScan` |
 
----
+## Messages
 
-## Scanning Images
-
-Send an image to PuryFi for scanning.
-
-```typescript
-const res = await connection.sendMessage("scanStaticMedia", {
-   image: image,
-});
-
-if (res.type === "ok") {
-   for (const obj of res.objects) {
-      console.log(
-         `label=${obj.label} score=${obj.score} at (${obj.rect.x}, ${obj.rect.y}) ${obj.rect.width}x${obj.rect.height}`
-      );
-   }
-}
-```
+## `scanStaticMedia`
 
 ### Arguments
 
 ```typescript
 {
-   image: Uint8Array; // encoded data of the image to scan
+   image: Uint8Array; // The encoded data of the image to scan. Valid formats are PNG, JPG, JPEG, BMP, WEBP, AVIF, and GIF. If the image is animated, only the first frame is considered.
 }
 ```
 
@@ -77,7 +62,7 @@ if (res.type === "ok") {
 ```typescript
 {
    type: "ok";
-   objects: Object[]; // objects
+   objects: Object[]; // The detected objects.
 }
 ```
 
@@ -98,162 +83,230 @@ if (res.type === "ok") {
 | `invalidMessage` | The message was malformed                               |
 | `internalError`  | Something went wrong inside PuryFi                      |
 
----
+### Examples
 
-## Censoring Images
-
-Send an image to PuryFi for censoring. You can either pass the objects to use for the censor or let PuryFi scan the image and use those.
+Scan a static image and log the detected objects:
 
 ```typescript
-const res = await connection.sendMessage("censorStaticMedia", {
-   image: imageBytes, // Uint8Array — encoded data of the image to censor
-   objects: null, // Objects[] | null — objects to use for the censor, or null to scan the image and use those.
+const res = await connection.sendMessage("scanStaticMedia", {
+   image: image,
 });
 
 if (res.type === "ok") {
-   // res.image — Uint8Array — encoded data of the censored image
-   // res.objects — objects used for the censor
-   const censoredImage = res.image;
+   for (const obj of res.objects) {
+      console.log(
+         `label=${obj.label} score=${obj.score} at (${obj.rect.x}, ${obj.rect.y}) ${obj.rect.width}x${obj.rect.height}`
+      );
+   }
 }
 ```
 
-To censor specific objects (e.g. from a previous scan), pass them in the `objects` field:
+## `censorStaticMedia`
+
+### Arguments
 
 ```typescript
-// Scan first, then selectively censor
-const scanRes = await connection.sendMessage("scanStaticMedia", {
-   image: imageBytes,
-});
-
-if (scanRes.type === "ok") {
-   // Filter to only censor certain labels
-   const toCensor = scanRes.objects.filter((obj) => obj.label === 4);
-
-   const censorRes = await connection.sendMessage("censorStaticMedia", {
-      image: imageBytes,
-      objects: toCensor,
-   });
+{
+   image: Uint8Array; // The encoded data of the image to censor. Valid formats are PNG, JPG, JPEG, BMP, WEBP, AVIF, and GIF. If the image is animated, only the first frame is considered.
+   objects: Object[] | null; // The objects to use for the censor. If null, the image is scanned and the detected objects are used.
 }
 ```
 
-### Response
+### Return
 
 **Success:**
 
 ```typescript
 {
    type: "ok";
-   image: Uint8Array;   // the censored image
-   objects: Object[];    // the objects that were detected/censored
+   image: Uint8Array; // The encoded data of the censored image in the same format as the passed image.
+   objects: Object[]; // The objects used for the censor.
 }
 ```
 
-**Error:** Same error names as `scanStaticMedia`.
-
----
-
-## Watching Live Scans
-
-Subscribe to real-time scan events happening inside PuryFi as the user browses. Each event delivers the detected objects from a scan.
+**Error:**
 
 ```typescript
-// Start watching
-const res = await connection.sendMessage("watchStaticMediaScans", {});
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingIntents" | "invalidImage";
+   message: string;
+}
+```
+
+| Error Name       | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `invalidImage`   | The image data could not be decoded                     |
+| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
+| `invalidMessage` | The message was malformed                               |
+| `internalError`  | Something went wrong inside PuryFi                      |
+
+### Examples
+
+Scan and censor a static image.
+
+```typescript
+const res = await connection.sendMessage("censorStaticMedia", {
+   image: image,
+   objects: null,
+});
 
 if (res.type === "ok") {
-   // Listen for scan events
-   connection.on("message", "staticMediaScan", (payload) => {
-      console.log(`Scan detected ${payload.objects.length} objects`);
-      for (const obj of payload.objects) {
-         console.log(`  label=${obj.label} score=${obj.score} id=${obj.id}`);
-      }
+   image = res.image;
+}
+```
+
+Scan a static image, then censor it using only the female and male face objects out of the detected ones.
+
+```typescript
+const scanRes = await connection.sendMessage("scanStaticMedia", {
+   image: image,
+   objects: null,
+});
+
+if (scanRes.type === "ok") {
+   const filteredObjects = scanRes.objects.filter(
+      (obj) => obj.label === Label.FemaleFace || obj.label === Label.MaleFace
+   );
+
+   const censorRes = await connection.sendMessage("censorStaticMedia", {
+      image: image,
+      objects: filteredObjects,
    });
 }
 ```
 
-To stop receiving events:
+## `watchStaticMediaScans`
 
-```typescript
-await connection.sendMessage("unwatchStaticMediaScans", {});
-```
+Subscribe to scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe, and [`staticMediaScan`](#staticmediascan) for the event message.
 
-### `staticMediaScan` Payload
+### Return
+
+**Success:**
 
 ```typescript
 {
-   objects: Object[];
+   type: "ok";
 }
 ```
 
-### Watch/Unwatch Errors
+**Error:**
 
 ```typescript
 {
    type: "error";
    name: "internalError" | "invalidMessage" | "missingIntents";
+   message: string;
 }
 ```
 
----
+| Error Name       | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| `missingIntents` | The `readMediaProcesses` intent has not been granted |
+| `invalidMessage` | The message was malformed                            |
+| `internalError`  | Something went wrong inside PuryFi                   |
 
-## Detection Objects
+### Examples
 
-Each detected object describes a region of the image and what was found there.
+Refer to [`staticMediaScan`](#staticmediascan) for examples.
+
+## `unwatchStaticMediaScans`
+
+Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`staticMediaScan`](#staticmediascan) for the event message.
+
+### Return
+
+**Success:**
 
 ```typescript
-interface Object {
-   rect: Rect; // bounding box
-   label: number; // what was detected (see Labels)
-   score: number; // confidence score (0–1)
-   id: number; // unique identifier for this detection
-}
-
-interface Rect {
-   x: number; // left edge
-   y: number; // top edge
-   width: number; // box width
-   height: number; // box height
+{
+   type: "ok";
 }
 ```
 
-Both types and the `Label` enum are exported from the SDK:
+**Error:**
 
 ```typescript
-import { Object, Rect, Label } from "@puryfi/puryfi-plugin-sdk";
-```
-
-### Validation Helpers
-
-The SDK exports type guard functions for runtime validation:
-
-```typescript
-import { isObject, isRect } from "@puryfi/puryfi-plugin-sdk";
-
-if (isObject(value)) {
-   // value is Object
-}
-
-if (isRect(value)) {
-   // value is Rect
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingIntents";
+   message: string;
 }
 ```
 
----
+| Error Name       | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| `missingIntents` | The `readMediaProcesses` intent has not been granted |
+| `invalidMessage` | The message was malformed                            |
+| `internalError`  | Something went wrong inside PuryFi                   |
 
-## Labels
+### Examples
 
-The `Label` enum maps numeric label values to body part identifiers. Use it to filter or interpret detection results.
+Refer to [`staticMediaScan`](#staticmediascan) for examples.
+
+## `staticMediaScan`
+
+Event received when a scan happens as the user browses. Refer to [`watchStaticMediaScans`](#watchstaticmediascans) for the message to subscribe, and [`unwatchStaticMediaScans`](#unwatchstaticmediascans) for the message to unsubscribe.
+
+### Arguments
 
 ```typescript
-import { Label } from "@puryfi/puryfi-plugin-sdk";
-
-// Filter to only face detections
-const faces = objects.filter(
-   (obj) => obj.label === Label.FaceFemale || obj.label === Label.FaceMale
-);
+{
+   objects: Object[]; // The detected objects.
+}
 ```
 
-### All Labels
+### Examples
+
+Subscribe to static media scan events, log the next 10 events, then unsubscribe.
+
+````typescript
+await connection.sendMessage("watchStaticMediaScans", {});
+
+let count = 0;
+connection.on("message", "staticMediaScan", async function listener({ objects }) {
+   console.log(`${count}: Received scan event`);
+   for (const obj of objects) {
+      console.log(
+         `label=${obj.label} score=${obj.score} at (${obj.rect.x}, ${obj.rect.y}) ${obj.rect.width}x${obj.rect.height}`
+      );
+   }
+
+   count++;
+   if (count >= 10) {
+      console.log("Done receiving scan events");
+
+      connection.off("message", "staticMediaScan", listener);
+      await connection.sendMessage("unwatchStaticMediaScans", {});
+   }
+});
+````
+
+## Types
+
+## `Object`
+
+```typescript
+{
+   rect: Rect; // The coordinates of the object. The cordinates go from 0 to 1
+   label: number; // The "kind" of object detected. You can try mapping this to a [`Label`](#labels) for easier interpretation
+   score: number; // The confidence on the object being accurate. Goes from 0 to 1
+   id: number; // Unique ID of the object
+}
+````
+
+## `Rect`
+
+```typescript
+{
+   x: number; // The x coordinate
+   y: number; // The y coordinate
+   width: number; // The width
+   height: number; // The height
+}
+```
+
+## `Label`
 
 | Value | Name                    | Value | Name            |
 | :---: | ----------------------- | :---: | --------------- |
@@ -270,21 +323,3 @@ const faces = objects.filter(
 |  10   | `MaleBreast`            |  23   | `Nipple`        |
 |  11   | `MaleBreastCovered`     |  24   | `HandCovered`   |
 |  12   | `FaceFemale`            |  25   | `Hand`          |
-
-### Label Patterns
-
-Labels follow a convention: uncovered variants use even numbers; their covered counterparts use `value + 1` (odd):
-
-| Uncovered            | Covered                     |
-| -------------------- | --------------------------- |
-| `Tummy (0)`          | `TummyCovered (1)`          |
-| `Buttocks (2)`       | `ButtocksCovered (3)`       |
-| `FemaleBreast (4)`   | `FemaleBreastCovered (5)`   |
-| `FemaleGenitals (6)` | `FemaleGenitalsCovered (7)` |
-| `MaleGenitals (9)`   | `MaleGenitalsCovered (8)`   |
-| `MaleBreast (10)`    | `MaleBreastCovered (11)`    |
-| `Foot (15)`          | `FootCovered (14)`          |
-| `Armpit (17)`        | `ArmpitCovered (16)`        |
-| `Anus (19)`          | `AnusCovered (18)`          |
-| `Nipple (23)`        | `NippleCovered (22)`        |
-| `Hand (25)`          | `HandCovered (24)`          |
