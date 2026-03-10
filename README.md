@@ -1,6 +1,6 @@
 # PuryFi Plugin SDK
 
-A TypeScript SDK for building plugins that integrate with the PuryFi browser extension. Provides WebSocket and browser-runtime based communication, typed message handling, state management, and media processing capabilities.
+A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for internal state access, media processing, and more.
 
 ## Table of Contents
 
@@ -13,8 +13,6 @@ A TypeScript SDK for building plugins that integrate with the PuryFi browser ext
 - [Plugin Manifest](#plugin-manifest)
 - [Custom Configuration](#custom-configuration)
 - [Chromium Bridge Setup](#chromium-bridge-setup)
-- [Debugging](#debugging)
-- [Error Handling](#error-handling)
 - [Complete Example](#complete-example)
 - [API Reference](#api-reference)
 - [Examples](#examples)
@@ -22,11 +20,11 @@ A TypeScript SDK for building plugins that integrate with the PuryFi browser ext
 
 ## How Communication Works
 
-Browsers do not allow extensions to open externally reachable connections. To work around this, PuryFi's plugin system inverts the typical client/server relationship — your plugin acts as the server and PuryFi connects to it as a client. The SDK handles this transparently.
+There are two kinds of plugins, browser extension plugins and WebSocket plugins. Building a plugin starts by deciding which kind is right for your goals.
 
-For **WebSocket plugins**, this means the plugin binds to a local port. This can cause issues if the port is already in use or the OS restricts binding. On the upside, a WebSocket plugin can technically serve multiple PuryFi instances over the network (the SDK currently broadcasts to all connected instances).
+**Browser extension plugins** are other browser extensions installed in the same browser as PuryFi. Communication with these on Firefox uses the browser's runtime messaging API, and on Chromium, a BroadcastChannel bridge through an iframe. See [Chromium Bridge Setup](#chromium-bridge-setup) for additional steps required on Chromium and the reason for these.
 
-For **browser extension plugins**, communication uses the browser's runtime messaging API (Firefox) or a BroadcastChannel bridge through an iframe (Chromium). See [Chromium Bridge Setup](#chromium-bridge-setup) for additional steps required on Chromium.
+**WebSocket plugins** are any program, local or remote, capable of opening a WebSocket server for PuryFi to connect and communicate through. The reason the typical client/server relationship is inverted in this case is that browsers do not provide extensions with an API for opening WebSocket servers.
 
 All messages use [msgpack](https://msgpack.org/) encoding.
 
@@ -38,172 +36,181 @@ npm install @pury-fi/plugin-sdk
 
 The SDK ships three entry points:
 
-| Import | Use |
-|--------|-----|
-| `@pury-fi/plugin-sdk` | Core types and `PuryFiConnection` |
-| `@pury-fi/plugin-sdk/socket` | `PuryFiSocket` upstream for standalone plugins |
-| `@pury-fi/plugin-sdk/browser` | `PuryFiBrowser` upstream for browser extension plugins |
+| Import                                  | Use                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `@pury-fi/plugin-sdk`                   | Core types and `Connection`                                         |
+| `@pury-fi/plugin-sdk/websocket`         | `WebSocketServer` upstream for WebSocket plugins                    |
+| `@pury-fi/plugin-sdk/browser-extension` | `BrowserExtensionConnection` upstream for browser extension plugins |
 
 ## Quick Start
 
-### Step 1 — Create an Upstream Connection
+### Step 1 — Open a Connection
 
-Choose the upstream that matches your plugin type.
+Open a connection to PuryFi for your plugin kind.
 
-**WebSocket (standalone plugin):**
-
-```typescript
-import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
-
-const upstream = new PuryFiSocket(8080);
-```
-
-Creates a WebSocket server on port 8080 that PuryFi connects to.
-
-Optional second argument for server options:
+**WebSocket:**
 
 ```typescript
-const upstream = new PuryFiSocket(8080, {
-   maxPayload: 128 * 1024 * 1024, // max message size in bytes (default: 128 MB)
-   perMessageDeflate: false,       // enable per-message compression (default: false)
+import * as SDK from "@pury-fi/plugin-sdk/websocket";
+
+// Open a WebSocket server at a given port for PuryFi to connect to.
+const server = new SDK.WebSocketServer(8080);
+
+// Wait for a connection.
+server.once("connection", (connection) => {
+   // Wait for the connection to open.
+   connection.once("open", () => {
+      // The connection to PuryFi is now open.
+   });
 });
 ```
 
 **Browser Extension:**
 
 ```typescript
-import PuryFiBrowser from "@pury-fi/plugin-sdk/browser";
+import * as SDK from "@pury-fi/plugin-sdk/browser-extension";
 
-const upstream = new PuryFiBrowser();
+// Create a connection to PuryFi in the same browser.
+const connection = new SDK.BrowserExtensionConnection();
+
+// Wait for the connection to open.
+connection.once("open", () => {
+   // The connection to PuryFi is now open.
+});
 ```
 
-Uses runtime messaging on Firefox and a BroadcastChannel bridge on Chromium. No port argument is needed.
+### Step 2 — Handle the Handshake
 
-### Step 2 — Create a Connection
+Shortly after the connection opens, PuryFi sends a `ready` message containing its version and API version. Respond to this message to confirm compatibility. Responses are sent by simply returning on the message handler.
 
 ```typescript
-import { PuryFiConnection } from "@pury-fi/plugin-sdk";
+// ...
 
-const connection = new PuryFiConnection(upstream);
+// Wait for the ready message.
+connection.once("message", "ready", (payload) => {
+   // Delegate responding to the connection itself. The connection will return a error response if the API version is of a different major than the SDK was built for, which should be the correct course of action in the majority of cases.
+   // Note that choosing to not delegate and instead respond yourself is also an option.
+   return connection.handleReadyMessage(payload);
+});
 ```
 
-### Step 3 — Handle the Handshake
+### Step 3 — Send a Manifest and Configuration
 
-When PuryFi connects, it sends a `ready` message containing its version and API version. Your plugin must respond to confirm compatibility, then send its manifest and configuration.
+Optionally, send a manifest and an user-adjustable configuration. These can be sent at any time, any number of times, not just in between these steps.
 
 ```typescript
-import type { PluginManifest, PluginConfiguration } from "@pury-fi/plugin-sdk";
+// ...
 
-const manifest: PluginManifest = {
+// Declare and send a manifest.
+let manifest: SDK.PluginManifest = {
    name: "My Plugin",
    version: "1.0.0",
    description: "Does useful things",
    author: null,
    website: null,
 };
+await connection.sendMessage("setManifest", { manifest });
 
-const configuration: PluginConfiguration = {
+// Declare and send a configuration.
+let configuration: SDK.PluginConfiguration = {
    threshold: {
       value: 0.8,
       type: "number",
       name: "Detection Threshold",
    },
 };
+await connection.sendMessage("setConfiguration", { configuration });
 
-connection.once("open", async () => {
-   // Wait for the ready message and validate API compatibility
-   const { version, apiVersion } = await new Promise<{
-      version: string;
-      apiVersion: string;
-   }>((resolve) => {
-      connection.on("message", "ready", (payload) => {
-         const response = connection.handleReadyMessage(payload);
-         if (response.type === "ok") resolve(payload);
-         return response;
-      });
-   });
-
-   // Send plugin metadata and settings
-   await connection.sendMessage("setManifest", { manifest });
-   await connection.sendMessage("setConfiguration", { configuration });
+// Handle configuration change events.
+connection.on("message", "configurationChange", (payload) => {
+   // Assign the new configuration.
+   configuration = payload.configuration;
 });
 ```
 
 ### Step 4 — Request Intents
 
-Intents are permissions your plugin needs. The user must approve them in the PuryFi UI. See [Intents](#intents) for the full list.
+Plugins need to be granted intents to access most of the API. Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. See [Intents](#intents) for the full list of intents and their description.
 
 ```typescript
-import type { Intent } from "@pury-fi/plugin-sdk";
+// ...
 
-const intents: Intent[] = ["readEnabled", "readWBlistConfiguration"];
+// Declare your desired intents.
+const intents: SDK.PluginIntent[] = ["readEnabled", "readWBlistConfiguration"];
 
-// Check which intents are already granted
-const response = await connection.sendMessage("getIntents", {});
+// Get the intents that have been granted in the past.
+const { intents: grantedIntents } = await connection
+   .sendMessage("getIntents", {})
+   .then((res) => {
+      // Throw if we get an error response.
+      if (res.type === "error") {
+         throw new Error(`Failed to get intents: ${res.message}`);
+      }
+      return res;
+   });
 
-if (response.type === "error") {
-   throw new Error(`Failed to get intents: ${response.message}`);
-}
+// Check if any desired intents have not been granted.
+if (!intents.every((intent) => grantedIntents.includes(intent))) {
+   // Request the desired intents.
+   await connection.sendMessage("requestIntents", { intents });
 
-if (!intents.every((i) => response.intents.includes(i))) {
-   // Request the missing intents and wait for the user to approve
+   // Wait for intents to be granted.
    await new Promise<void>(async (resolve) => {
-      connection.on("message", "intentsGrant", function listener({ intents: granted }) {
-         if (intents.every((i) => granted.includes(i))) {
-            connection.off("message", "intentsGrant", listener);
-            resolve();
+      connection.on(
+         "message",
+         "intentsGrant",
+         function listener({ intents: granted }) {
+            // Check if all desired intents have been granted, and if so, proceed.
+            if (intents.every((i) => granted.includes(i))) {
+               connection.off("message", "intentsGrant", listener);
+               resolve();
+            }
          }
-      });
-
-      await connection.sendMessage("requestIntents", { intents });
+      );
    });
 }
+
+// All desired intents are now granted.
 ```
 
-You can also check which intents are still pending user approval:
+If you require so, you may also get the intents requested and not yet granted.
 
 ```typescript
-const pending = await connection.sendMessage("getPendingIntents", {});
-if (pending.type === "ok") {
-   console.log("Waiting for user to approve:", pending.pendingIntents);
-}
+// ...
+
+// Get the intents that have been requested and not yet granted.
+const { pendingIntents } = await connection
+   .sendMessage("getPendingIntents", {})
+   .then((res) => {
+      // Throw if we get an error response.
+      if (res.type === "error") {
+         throw new Error(`Failed to get pending intents: ${res.message}`);
+      }
+      return res;
+   });
 ```
+
+### Done
+
+After this point you may implement the main functionality of your plugin, remembering to update your desired plugins as needed and reacting to configuration changes if necessary.
+
+Refer to [API Reference](#api-reference) for detailed documentation, and to [Examples](#examples) for complete example plugins.
 
 ## Intents
 
-Intents are PuryFi's permission system. On first connection, the user is prompted to approve your plugin's intents. If your intents change after the first handshake, PuryFi refuses the connection. Only request what you need — some intents generate significant traffic or grant deep control.
+Refer to [Quick Start](#quick-start) for how and when to request intents. This is the full list of intents and their description:
 
-| Intent | Description |
-|--------|-------------|
-| `readEnabled` | Read PuryFi's enabled/disabled state |
-| `writeEnabled` | Change PuryFi's enabled/disabled state |
-| `readLockConfiguration` | Read lock settings |
-| `writeLockConfiguration` | Modify lock settings |
-| `readWBlistConfiguration` | Read whitelist/blacklist configuration |
-| `writeWBlistConfiguration` | Modify whitelist/blacklist configuration |
-| `readUser` | Read the current user's profile information |
-| `readMediaProcesses` | Receive real-time media scan events |
-| `requestMediaProcesses` | Scan and censor images through PuryFi |
-
-## Connection Events
-
-`PuryFiConnection` emits lifecycle events and typed message events.
-
-### Lifecycle Events
-
-```typescript
-connection.on("open", () => {
-   console.log("PuryFi connected");
-});
-
-connection.on("close", () => {
-   console.log("PuryFi disconnected");
-});
-
-connection.on("error", (error: PuryFiConnectionError) => {
-   console.error(error.name, error.message);
-});
-```
+| Intent                     | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `readEnabled`              | Read PuryFi's enabled/disabled state        |
+| `writeEnabled`             | Change PuryFi's enabled/disabled state      |
+| `readLockConfiguration`    | Read lock settings                          |
+| `writeLockConfiguration`   | Modify lock settings                        |
+| `readWBlistConfiguration`  | Read whitelist/blacklist configuration      |
+| `writeWBlistConfiguration` | Modify whitelist/blacklist configuration    |
+| `readUser`                 | Read the current user's profile information |
+| `readMediaProcesses`       | Receive real-time media scan events         |
+| `requestMediaProcesses`    | Scan and censor images through PuryFi       |
 
 ### Message Events
 
@@ -229,14 +236,14 @@ connection.on("message", "intentsGrant", (payload) => {
 
 ### Listener Methods
 
-| Method | Description |
-|--------|-------------|
-| `on(event, listener)` | Add a persistent listener |
-| `on("message", type, listener)` | Add a persistent typed message listener |
-| `once(event, listener)` | Add a one-time listener |
-| `once("message", type, listener)` | Add a one-time typed message listener |
-| `off(event, listener)` | Remove a listener |
-| `off("message", type, listener)` | Remove a typed message listener |
+| Method                            | Description                             |
+| --------------------------------- | --------------------------------------- |
+| `on(event, listener)`             | Add a persistent listener               |
+| `on("message", type, listener)`   | Add a persistent typed message listener |
+| `once(event, listener)`           | Add a one-time listener                 |
+| `once("message", type, listener)` | Add a one-time typed message listener   |
+| `off(event, listener)`            | Remove a listener                       |
+| `off("message", type, listener)`  | Remove a typed message listener         |
 
 Message listeners receive `(payload, currentResponse)` and can return a value to send back to PuryFi for messages that expect a response (like `ready`).
 
@@ -259,16 +266,16 @@ const configRes = await connection.sendMessage("getConfiguration", {});
 Read, write, and watch PuryFi's internal state using dot-separated paths. See the [State API Reference](docs/STATE_API.md) for all available paths, types, and access levels.
 
 ```typescript
-// Read
+// Get
 const res = await connection.sendMessage("getState", { path: "enabled" });
 
-// Write
+// Set
 await connection.sendMessage("setState", {
-   path: "wblistConfiguration.mode",
-   value: "whitelist",
+   path: "enabled",
+   value: true,
 });
 
-// Watch for changes
+// Start watching
 await connection.sendMessage("watchState", { path: "enabled" });
 connection.on("message", "stateChange", (payload) => {
    console.log(`${payload.path} changed to`, payload.value);
@@ -317,13 +324,13 @@ await connection.sendMessage("enterLockEmergencyServerToken", {
 
 The `PluginManifest` describes your plugin to PuryFi. All fields are `string | null`.
 
-| Field | Description |
-|-------|-------------|
-| `name` | Display name |
-| `version` | Semantic version |
-| `description` | Short description |
-| `author` | Author name |
-| `website` | Plugin website URL |
+| Field         | Description        |
+| ------------- | ------------------ |
+| `name`        | Display name       |
+| `version`     | Semantic version   |
+| `description` | Short description  |
+| `author`      | Author name        |
+| `website`     | Plugin website URL |
 
 ## Custom Configuration
 
@@ -332,9 +339,9 @@ Define settings that users can adjust in the PuryFi UI. Each field in the `Plugi
 ```typescript
 const configuration: PluginConfiguration = {
    myField: {
-      value: 42,           // default value
-      type: "number",      // "string" | "number" | "boolean"
-      name: "My Setting",  // display name shown to the user
+      value: 42, // default value
+      type: "number", // "string" | "number" | "boolean"
+      name: "My Setting", // display name shown to the user
    },
 };
 ```
@@ -371,51 +378,13 @@ PuryFi loads `bridge.html` in an offscreen iframe and transfers a MessageChannel
 
 See the [ChromiumPlugin example](examples/ChromiumPlugin) for a working implementation.
 
-## Debugging
-
-Enable debug logging on both the upstream and the connection:
-
-```typescript
-upstream.setDebug(true);
-connection.setDebug(true);
-```
-
-This logs connection lifecycle events and message traffic to the console, prefixed with `[PuryFi SDK]`.
-
-## Error Handling
-
-`sendMessage` returns a typed response. Always check the response type:
-
-```typescript
-const res = await connection.sendMessage("getState", { path: "enabled" });
-if (res.type === "error") {
-   console.error(`${res.name}: ${res.message}`);
-} else {
-   console.log("Value:", res.value);
-}
-```
-
-Error names vary by message type but include:
-
-| Error Name | Description |
-|------------|-------------|
-| `internalError` | Something went wrong inside PuryFi |
-| `invalidMessage` | The message was malformed |
-| `missingIntents` | The plugin hasn't been granted the required intents |
-| `unavailablePath` | The state path doesn't exist or is inaccessible |
-| `invalidImage` | The image data was invalid (media messages) |
-| `incompatibleApiVersion` | Version mismatch during handshake |
-
 ## Complete Example
 
 A full WebSocket plugin that connects, handshakes, sets up configuration, and handles intents:
 
 ```typescript
 import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
-import {
-   PuryFiConnection,
-   PuryFiConnectionError,
-} from "@pury-fi/plugin-sdk";
+import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginManifest,
    PluginConfiguration,
@@ -484,11 +453,13 @@ connection.once("open", async () => {
    });
 
    // Request intents if needed
-   const response = await connection.sendMessage("getIntents", {}).then((res) => {
-      if (res.type === "error")
-         throw new Error(`Failed to get intents: ${res.message}`);
-      return res;
-   });
+   const response = await connection
+      .sendMessage("getIntents", {})
+      .then((res) => {
+         if (res.type === "error")
+            throw new Error(`Failed to get intents: ${res.message}`);
+         return res;
+      });
 
    if (!intents.every((intent) => response.intents.includes(intent))) {
       await new Promise<void>(async (resolve) => {

@@ -17,15 +17,15 @@
          "import": "./dist/esm/core/index.js",
          "require": "./dist/cjs/core/index.cjs"
       },
-      "./browser": {
-         "types": "./dist/esm/browser/index.d.ts",
-         "import": "./dist/esm/browser/index.js",
-         "require": "./dist/cjs/browser/index.cjs"
+      "./browser-extension": {
+         "types": "./dist/esm/browser-extension/index.d.ts",
+         "import": "./dist/esm/browser-extension/index.js",
+         "require": "./dist/cjs/browser-extension/index.cjs"
       },
-      "./socket": {
-         "types": "./dist/esm/socket/index.d.ts",
-         "import": "./dist/esm/socket/index.js",
-         "require": "./dist/cjs/socket/index.cjs"
+      "./websocket": {
+         "types": "./dist/esm/websocket/index.d.ts",
+         "import": "./dist/esm/websocket/index.js",
+         "require": "./dist/cjs/websocket/index.cjs"
       }
    },
    "files": [

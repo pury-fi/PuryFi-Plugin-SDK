@@ -19,7 +19,7 @@ export default class BrowserExtensionConnection extends UpstreamConnection {
       super();
       if (isChromiumExtension()) {
          this.upstream = new BroadcastChannel("puryfi-binary-bus");
-         this.upstream?.postMessage({ type: "CLOSE" });
+         this.upstream.postMessage({ type: "CLOSE" });
          let initialized = false;
          let intervalId = setInterval(() => {
             if (!initialized) {
@@ -57,9 +57,9 @@ export default class BrowserExtensionConnection extends UpstreamConnection {
                }
             }
          };
-      } else {
+      } else { 
          extension.runtime.onConnect.addListener((port) => {
-            if (port.name.startsWith("puryfi-plugin-initiator")) {
+            if (port.name === "puryfi-plugin-initiator") {
                this.upstream = port;
                this.upstream.onMessage.addListener((message) => {
                   let tmpRaw = message as Record<string, unknown>;

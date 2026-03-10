@@ -7,7 +7,7 @@ export type SocketEvents = {
    connection: (connection: Connection) => void;
 };
 
-export default class WebSocketServer {
+export class WebSocketServer {
    private socketServer: ws.WebSocketServer;
    private debug: boolean = false;
    protected listeners: { [K: string]: Set<(...args: any[]) => void> } = {};

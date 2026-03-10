@@ -1,5 +1,5 @@
-import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
-import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
+import { WebSocketServer } from "@pury-fi/plugin-sdk/websocket";
+import { , PuryFiConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginConfiguration,
    PluginManifest,
@@ -16,9 +16,9 @@ import type {
  * - Handles user-editable configuration fields
  */
 
-const upstreamConnection = new PuryFiSocket(8080);
-upstreamConnection.setDebug(true);
-upstreamConnection.on("connection", (connection) => {
+const server = new WebSocketServer(8080);
+server.setDebug(true);
+server.on("connection", (connection) => {
    console.log("Client connected to WebSocket plugin instance");
 
    connection.setDebug(true);
