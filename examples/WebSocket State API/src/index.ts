@@ -3,7 +3,7 @@ import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginConfiguration,
    PluginManifest,
-   Intent,
+   PluginIntent,
 } from "@pury-fi/plugin-sdk";
 
 /**
@@ -23,7 +23,7 @@ upstreamConnection.on("connection", (connection) => {
 
    connection.setDebug(true);
 
-   const intents: Intent[] = [
+   const intents: PluginIntent[] = [
       "readEnabled",
       "writeEnabled",
       "readLockConfiguration",

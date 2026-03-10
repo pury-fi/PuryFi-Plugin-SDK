@@ -7,56 +7,65 @@ import {
    PayloadArgument,
    Return,
    TypeArgument,
-} from "./messages.js";
+} from "./message.js";
 import {
    compareVersions,
    maxApiVersion,
    minApiVersion,
    parseVersion,
-   PuryFiUpstream,
-} from "./upstream.js";
+   UpstreamConnection,
+} from "./upstream-connection.js";
 import { isNumber, isObject, isUndefined } from "./type-util.js";
-import { ReadOnlyPath, ReadOnlyValue } from "./index.js";
-import ws from "ws";
+import { ReadOnlyPath, ReadOnlyValue } from "./state.js";
 
-type Events = {
-   // TODO: Narrow argument types and test it
-   message: (
-      type: TypeArgument<IncomingMessage>,
-      payload: PayloadArgument<IncomingMessage>,
-      currentResponse: any
-   ) => any;
-   error: (error: PuryFiConnectionError) => void;
+export type ConnectionMessageEvent<T extends TypeArgument<IncomingMessage>> = {
+   type: T;
+   payload: PayloadArgument<ExtractByTypeArgument<IncomingMessage, T>>;
+   currentResponse:
+      | Return<ExtractByTypeArgument<IncomingMessage, T>>
+      | undefined;
+};
+export type AnyConnectionMessageEvent = {
+   [K in TypeArgument<IncomingMessage>]: ConnectionMessageEvent<K>;
+}[TypeArgument<IncomingMessage>];
+
+export type ConnectionEvents = {
+   message: (event: AnyConnectionMessageEvent) => any;
+   error: (error: ConnectionError) => void;
    open: () => void;
    close: () => void;
 };
 
-export type Listener<T> = (
+export type TypedConnectionMessageEventListener<T> = (
    payload: PayloadArgument<T>,
    currentResponse: undefined | Return<T>
 ) => Return<T> | Promise<Return<T>>;
 
-export class PuryFiConnection {
+export class Connection {
    private messageListeners: {
       [K in TypeArgument<IncomingMessage>]?: Set<
-         Listener<ExtractByTypeArgument<IncomingMessage, K>>
+         TypedConnectionMessageEventListener<
+            ExtractByTypeArgument<IncomingMessage, K>
+         >
       >;
    } = {};
    private onceMessageListeners: {
       [K in TypeArgument<IncomingMessage>]?: Set<
-         Listener<ExtractByTypeArgument<IncomingMessage, K>>
+         TypedConnectionMessageEventListener<
+            ExtractByTypeArgument<IncomingMessage, K>
+         >
       >;
    } = {};
    private listeners: {
-      [K in keyof Events]?: Set<Events[K]>;
+      [K in keyof ConnectionEvents]?: Set<ConnectionEvents[K]>;
    } = {};
    private onceListeners: {
-      [K in keyof Events]?: Set<Events[K]>;
+      [K in keyof ConnectionEvents]?: Set<ConnectionEvents[K]>;
    } = {};
    private responseListeners: {
       [K in number]?: [
          (response: any) => void,
-         (error: PuryFiConnectionError) => void,
+         (error: ConnectionError) => void,
       ];
    } = {};
    private nextResponseId = 0;
@@ -66,7 +75,7 @@ export class PuryFiConnection {
     * Creates a new connection to PuryFi.
     * @param upstream The upstream connection
     */
-   constructor(public upstream: PuryFiUpstream) {
+   constructor(public upstream: UpstreamConnection) {
       upstream.on("message", (data) => this.handleMessage(data));
       upstream.on("error", (error) => this.handleError(error));
       upstream.on("open", () => this.handleOpen());
@@ -90,17 +99,27 @@ export class PuryFiConnection {
    on<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
-      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+      listener: TypedConnectionMessageEventListener<
+         ExtractByTypeArgument<IncomingMessage, T>
+      >
    ): void;
-   on<K extends keyof Events>(event: K, listener: Events[K]): void;
-   on<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+   on<K extends keyof ConnectionEvents>(
+      event: K,
+      listener: ConnectionEvents[K]
+   ): void;
+   on<
+      K extends keyof ConnectionEvents,
+      T extends TypeArgument<IncomingMessage>,
+   >(
       ...args:
          | [
               event: "message",
               type: T,
-              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+              listener: TypedConnectionMessageEventListener<
+                 ExtractByTypeArgument<IncomingMessage, T>
+              >,
            ]
-         | [event: K, listener: Events[K]]
+         | [event: K, listener: ConnectionEvents[K]]
    ): void {
       if (
          args[0] === "message" &&
@@ -133,17 +152,27 @@ export class PuryFiConnection {
    once<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
-      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+      listener: TypedConnectionMessageEventListener<
+         ExtractByTypeArgument<IncomingMessage, T>
+      >
    ): void;
-   once<K extends keyof Events>(event: K, listener: Events[K]): void;
-   once<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+   once<K extends keyof ConnectionEvents>(
+      event: K,
+      listener: ConnectionEvents[K]
+   ): void;
+   once<
+      K extends keyof ConnectionEvents,
+      T extends TypeArgument<IncomingMessage>,
+   >(
       ...args:
          | [
               event: "message",
               type: T,
-              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+              listener: TypedConnectionMessageEventListener<
+                 ExtractByTypeArgument<IncomingMessage, T>
+              >,
            ]
-         | [event: K, listener: Events[K]]
+         | [event: K, listener: ConnectionEvents[K]]
    ): void {
       if (
          args[0] === "message" &&
@@ -176,17 +205,27 @@ export class PuryFiConnection {
    off<T extends TypeArgument<IncomingMessage>>(
       event: "message",
       type: T,
-      listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>
+      listener: TypedConnectionMessageEventListener<
+         ExtractByTypeArgument<IncomingMessage, T>
+      >
    ): void;
-   off<K extends keyof Events>(event: K, listener: Events[K]): void;
-   off<K extends keyof Events, T extends TypeArgument<IncomingMessage>>(
+   off<K extends keyof ConnectionEvents>(
+      event: K,
+      listener: ConnectionEvents[K]
+   ): void;
+   off<
+      K extends keyof ConnectionEvents,
+      T extends TypeArgument<IncomingMessage>,
+   >(
       ...args:
          | [
               event: "message",
               type: T,
-              listener: Listener<ExtractByTypeArgument<IncomingMessage, T>>,
+              listener: TypedConnectionMessageEventListener<
+                 ExtractByTypeArgument<IncomingMessage, T>
+              >,
            ]
-         | [event: K, listener: Events[K]]
+         | [event: K, listener: ConnectionEvents[K]]
    ): void {
       if (
          args[0] === "message" &&
@@ -275,9 +314,9 @@ export class PuryFiConnection {
       };
    }
 
-   private emit<K extends keyof Exclude<Events, "message">>(
+   private emit<K extends keyof Exclude<ConnectionEvents, "message">>(
       event: K,
-      ...args: Parameters<Events[K]>
+      ...args: Parameters<ConnectionEvents[K]>
    ): undefined {
       this.onceListeners[event]?.forEach((listener) =>
          // @ts-ignore
@@ -308,21 +347,21 @@ export class PuryFiConnection {
       this.onceListeners["message"]?.forEach(
          (listener) =>
             // @ts-ignore
-            (currentResponse = listener(
-               message.type,
-               message.payload,
-               currentResponse
-            ))
+            (currentResponse = listener({
+               type: message.type,
+               payload: message.payload,
+               currentResponse,
+            }))
       );
       delete this.onceListeners["message"];
       this.listeners["message"]?.forEach(
          (listener) =>
             // @ts-ignore
-            (currentResponse = listener(
-               message.type,
-               message.payload,
-               currentResponse
-            ))
+            (currentResponse = listener({
+               type: message.type,
+               payload: message.payload,
+               currentResponse,
+            }))
       );
 
       return currentResponse;
@@ -356,7 +395,7 @@ export class PuryFiConnection {
          if (responseCallback === undefined) {
             this.emit(
                "error",
-               new PuryFiConnectionError(
+               new ConnectionError(
                   "ClientError",
                   "Response for unknown request received",
                   message.responseId
@@ -383,7 +422,7 @@ export class PuryFiConnection {
          } catch (error) {
             this.emit(
                "error",
-               new PuryFiConnectionError(
+               new ConnectionError(
                   "ClientError",
                   "Error while handling message"
                )
@@ -422,13 +461,13 @@ export class PuryFiConnection {
     * Handles an error event from upstream connection.
     * @param error The error
     */
-   private handleError(error: PuryFiConnectionError) {
+   private handleError(error: ConnectionError) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
    }
 }
 
-export class PuryFiConnectionError extends Error {
+export class ConnectionError extends Error {
    constructor(
       public name: "ResponseError" | "SocketError" | "ClientError",
       message: string,

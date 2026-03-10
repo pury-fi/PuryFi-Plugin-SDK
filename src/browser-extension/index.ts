@@ -1,7 +1,7 @@
-import { PuryFiConnectionError } from "../core/puryfi.js";
-import { PuryFiUpstream } from "../core/upstream.js";
+import { ConnectionError } from "../core/connection.js";
+import { UpstreamConnection } from "../core/upstream-connection.js";
 
-export const extension = globalThis.browser ?? globalThis.chrome;
+const extension = globalThis.browser ?? globalThis.chrome;
 
 interface BroadcastMessage {
    type: "SEND_TO_PURYFI" | "MESSAGE_FROM_PURYFI" | "CLOSE" | "ERROR" | "OPEN";
@@ -12,7 +12,7 @@ function isChromiumExtension(): boolean {
    return chrome.runtime.getManifest().manifest_version === 3;
 }
 
-export default class PuryFiBrowser extends PuryFiUpstream {
+export default class BrowserExtensionConnection extends UpstreamConnection {
    private upstream: BroadcastChannel | browser.runtime.Port | null = null;
 
    constructor() {
@@ -40,7 +40,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                      const ping = new ArrayBuffer(1);
                      new Uint8Array(ping)[0] = 0x09;
                      this.send(ping);
-                  }, 2000)
+                  }, 2000);
                   initialized = true;
                   this.emit("open");
                }
@@ -52,10 +52,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
                } else if (data.type === "ERROR") {
                   this.emit(
                      "error",
-                     new PuryFiConnectionError(
-                        "SocketError",
-                        data.data as string
-                     )
+                     new ConnectionError("SocketError", data.data as string)
                   );
                }
             }
@@ -87,7 +84,7 @@ export default class PuryFiBrowser extends PuryFiUpstream {
          } else if (this.upstream) {
             this.upstream.postMessage({ data });
          } else {
-            throw new PuryFiConnectionError(
+            throw new ConnectionError(
                "SocketError",
                "No upstream connection available"
             );
@@ -95,12 +92,12 @@ export default class PuryFiBrowser extends PuryFiUpstream {
       } catch (error) {
          if (error instanceof DOMException) {
             if (error.name === "InvalidStateError") {
-               throw new PuryFiConnectionError(
+               throw new ConnectionError(
                   "SocketError",
                   "Socket connection already closed"
                );
             } else if (error.name === "DataCloneError") {
-               throw new PuryFiConnectionError(
+               throw new ConnectionError(
                   "SocketError",
                   "Data could not be serialized"
                );

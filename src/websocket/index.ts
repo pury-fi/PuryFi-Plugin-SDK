@@ -1,18 +1,14 @@
-import WebSocket, { PerMessageDeflateOptions, WebSocketServer } from "ws";
-import { PuryFiUpstream } from "../core/upstream.js";
-import { PuryFiConnection, PuryFiConnectionError } from "../core/index.js";
-
-// TODO: Handle multiple clients attempting to connect
-
-// TODO: Implement receiving and validating a version and API version from the browser upstream as well
+import * as ws from "ws";
+import { UpstreamConnection } from "../core/upstream-connection.js";
+import { Connection, ConnectionError } from "../core/index.js";
 
 export type SocketEvents = {
-   error: (error: PuryFiConnectionError) => void;
-   connection: (connection: PuryFiConnection) => void;
+   error: (error: ConnectionError) => void;
+   connection: (connection: Connection) => void;
 };
 
-export default class PuryFiSocket {
-   private socketServer: WebSocketServer;
+export default class WebSocketServer {
+   private socketServer: ws.WebSocketServer;
    private debug: boolean = false;
    protected listeners: { [K: string]: Set<(...args: any[]) => void> } = {};
 
@@ -82,7 +78,7 @@ export default class PuryFiSocket {
       port: number,
       options: {
          maxPayload?: number | undefined;
-         perMessageDeflate?: boolean | PerMessageDeflateOptions | undefined;
+         perMessageDeflate?: boolean | ws.PerMessageDeflateOptions | undefined;
       } = {}
    ) {
       options = {
@@ -91,34 +87,31 @@ export default class PuryFiSocket {
          ...options,
       };
 
-      this.socketServer = new WebSocketServer({
+      this.socketServer = new ws.WebSocketServer({
          port,
          ...options,
       });
       this.socketServer.on("listening", () => {
-         this.log("PuryFiSocket listening on port", port);
+         this.log("WebSocket server listening on port", port);
       });
       this.socketServer.on("error", (err: Error) => {
-         this.log("PuryFiSocket error on port", port, err.message);
-         this.emit(
-            "error",
-            new PuryFiConnectionError("SocketError", err.message)
-         );
+         this.log("WebSocket server error on port", port, err.message);
+         this.emit("error", new ConnectionError("SocketError", err.message));
       });
 
-      this.socketServer.on("connection", (ws: WebSocket) => {
-         this.log("New client connected to PuryFiSocket on port", port);
+      this.socketServer.on("connection", (ws: ws.WebSocket) => {
+         this.log("New client connected to WebSocket connection on port", port);
 
          ws.binaryType = "arraybuffer";
-         let instance = new PuryFiSocketInstance(ws, this.debug);
-         this.emit("connection", new PuryFiConnection(instance));
+         let instance = new WebSocketConnection(ws, this.debug);
+         this.emit("connection", new Connection(instance));
          instance.open();
       });
    }
 }
 
-export class PuryFiSocketInstance extends PuryFiUpstream {
-   private client: WebSocket | null = null;
+export class WebSocketConnection extends UpstreamConnection {
+   private client: ws.WebSocket | null = null;
 
    send(data: ArrayBuffer | string): void {
       if (this.client) {
@@ -130,29 +123,26 @@ export class PuryFiSocketInstance extends PuryFiUpstream {
       this.emit("open");
    }
 
-   constructor(ws: WebSocket, debug: boolean = false) {
+   constructor(ws: ws.WebSocket, debug: boolean = false) {
       super();
       this.setDebug(debug);
 
       ws.binaryType = "arraybuffer";
       this.client = ws;
 
-      ws.on("message", (data: WebSocket.Data) => {
-         this.log("Received message from client on PuryFiSocket");
+      ws.on("message", (data: ws.WebSocket.Data) => {
+         this.log("Received message from client on WebSocket connection");
          let binaryData = data as ArrayBuffer;
          this.emit("message", binaryData);
       });
       ws.on("close", () => {
-         this.log("Client disconnected from PuryFiSocket");
+         this.log("Client disconnected from WebSocket connection");
          this.client = null;
          this.emit("close");
       });
       ws.on("error", (err: Error) => {
-         this.log("Client error on PuryFiSocket", err.message);
-         this.emit(
-            "error",
-            new PuryFiConnectionError("SocketError", err.message)
-         );
+         this.log("Client error on WebSocket connection", err.message);
+         this.emit("error", new ConnectionError("SocketError", err.message));
       });
    }
 }

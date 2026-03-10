@@ -1,12 +1,9 @@
 import PuryFiBrowser from "@pury-fi/plugin-sdk/browser";
-import {
-   PuryFiConnection,
-   PuryFiConnectionError,
-} from "@pury-fi/plugin-sdk";
+import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginConfiguration,
    PluginManifest,
-   Intent,
+   PluginIntent,
 } from "@pury-fi/plugin-sdk";
 
 /**
@@ -21,7 +18,7 @@ const connection = new PuryFiConnection(upstreamConnection);
 upstreamConnection.setDebug(true);
 connection.setDebug(true);
 
-const intents: Intent[] = [
+const intents: PluginIntent[] = [
    /**
     * Specify your required intents here.
     */

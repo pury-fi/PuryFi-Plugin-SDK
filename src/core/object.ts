@@ -1,17 +1,3 @@
-export interface Rect {
-   x: number;
-   y: number;
-   width: number;
-   height: number;
-}
-
-export interface Object {
-   rect: Rect;
-   label: number;
-   score: number;
-   id: number;
-}
-
 export enum Label {
    Tummy = 0,
    TummyCovered = 1,
@@ -41,6 +27,17 @@ export enum Label {
    Hand = 25,
 }
 
+export function isLabel(value: any): value is Label {
+   return typeof value === "number" && value >= 0 && value <= 25;
+}
+
+export interface Rect {
+   x: number;
+   y: number;
+   width: number;
+   height: number;
+}
+
 export function isRect(value: any): value is Rect {
    return (
       typeof value === "object" &&
@@ -50,6 +47,13 @@ export function isRect(value: any): value is Rect {
       typeof value.width === "number" &&
       typeof value.height === "number"
    );
+}
+
+export interface Object {
+   rect: Rect;
+   label: number;
+   score: number;
+   id: number;
 }
 
 export function isObject(value: any): value is Object {

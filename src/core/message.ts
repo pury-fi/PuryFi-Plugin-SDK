@@ -1,11 +1,12 @@
 import {
-   PluginManifest,
    PluginConfiguration,
    ReadOnlyPath,
    ReadOnlyValue,
    WriteOnlyPath,
    WriteOnlyValue,
-} from "./";
+} from ".";
+import { PluginIntent } from "./intent";
+import { PluginManifest } from "./manifest";
 import { Object } from "./object";
 
 export type TypeArgument<T> = T extends (type: infer A, payload: any) => any
@@ -69,7 +70,7 @@ namespace IncomingMessages {
    export type IntentsGrant = (
       type: "intentsGrant",
       payload: {
-         intents: Intent[];
+         intents: PluginIntent[];
       }
    ) => void;
 
@@ -144,12 +145,12 @@ namespace OutgoingMessages {
    export type RequestIntents = (
       type: "requestIntents",
       payload: {
-         intents: Intent[];
+         intents: PluginIntent[];
       }
    ) =>
       | {
            type: "ok";
-           pendingIntents: Intent[];
+           pendingIntents: PluginIntent[];
         }
       | {
            type: "error";
@@ -163,7 +164,7 @@ namespace OutgoingMessages {
    ) =>
       | {
            type: "ok";
-           pendingIntents: Intent[];
+           pendingIntents: PluginIntent[];
         }
       | {
            type: "error";
@@ -177,7 +178,7 @@ namespace OutgoingMessages {
    ) =>
       | {
            type: "ok";
-           intents: Intent[];
+           intents: PluginIntent[];
         }
       | {
            type: "error";
@@ -425,22 +426,3 @@ export type OutgoingMessageObject = {
       payload: PayloadArgument<ExtractByTypeArgument<OutgoingMessage, K>>;
    };
 }[TypeArgument<OutgoingMessage>];
-
-/**
- * ====================================================================
- * Intents
- * ====================================================================
- */
-
-export const Intents = [
-   "readEnabled",
-   "writeEnabled",
-   "readLockConfiguration",
-   "writeLockConfiguration",
-   "readWBlistConfiguration",
-   "writeWBlistConfiguration",
-   "readUser",
-   "readMediaProcesses",
-   "requestMediaProcesses",
-] as const;
-export type Intent = (typeof Intents)[number];

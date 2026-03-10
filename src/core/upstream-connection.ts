@@ -1,12 +1,5 @@
 import { encode } from "@msgpack/msgpack";
-import { PuryFiConnectionError } from ".";
-
-export type UpstreamEvents = {
-   error: (error: PuryFiConnectionError) => void;
-   message: (event: ArrayBuffer) => void;
-   open: () => void;
-   close: () => void;
-};
+import { ConnectionError } from ".";
 
 export const versionReg = /^\d+\.\d+\.\d+\.\d+$/;
 export const apiVersionReg = /^\d+\.\d+\.\d+$/;
@@ -40,18 +33,33 @@ export function compareVersions(
    return 0;
 }
 
-export abstract class PuryFiUpstream {
+export function isVersion(value: unknown): value is string {
+   return typeof value === "string" && versionReg.test(value);
+}
+
+export function isAPIVersion(value: unknown): value is string {
+   return typeof value === "string" && apiVersionReg.test(value);
+}
+
+export type UpstreamConnectionEvents = {
+   error: (error: ConnectionError) => void;
+   message: (event: ArrayBuffer) => void;
+   open: () => void;
+   close: () => void;
+};
+
+export abstract class UpstreamConnection {
    private debug: boolean = false;
    protected listeners: { [K: string]: Set<(...args: any[]) => void> } = {};
    abstract send(data: ArrayBuffer | string): void;
 
-   private getSet<K extends keyof UpstreamEvents>(
+   private getSet<K extends keyof UpstreamConnectionEvents>(
       type: K
-   ): Set<UpstreamEvents[K]> {
+   ): Set<UpstreamConnectionEvents[K]> {
       const existing = this.listeners[type];
       if (existing) return existing;
 
-      const created = new Set<UpstreamEvents[K]>();
+      const created = new Set<UpstreamConnectionEvents[K]>();
       // @ts-ignore yes typescript, I know what I'm doing
       this.listeners[type] = created;
       return created;
@@ -73,9 +81,9 @@ export abstract class PuryFiUpstream {
     * @param callback The callback
     * @returns
     */
-   addListener<K extends keyof UpstreamEvents>(
+   addListener<K extends keyof UpstreamConnectionEvents>(
       type: K,
-      callback: UpstreamEvents[K]
+      callback: UpstreamConnectionEvents[K]
    ): this {
       this.getSet(type).add(callback);
       return this;
@@ -92,9 +100,9 @@ export abstract class PuryFiUpstream {
     * @param callback The callback
     * @returns
     */
-   off<K extends keyof UpstreamEvents>(
+   off<K extends keyof UpstreamConnectionEvents>(
       type: K,
-      callback: UpstreamEvents[K]
+      callback: UpstreamConnectionEvents[K]
    ): this {
       this.listeners[type]?.delete(callback);
       return this;
@@ -105,9 +113,9 @@ export abstract class PuryFiUpstream {
     * @param type The event
     * @param args The event arguments
     */
-   protected emit<K extends keyof UpstreamEvents>(
+   protected emit<K extends keyof UpstreamConnectionEvents>(
       type: K,
-      ...args: Parameters<UpstreamEvents[K]>
+      ...args: Parameters<UpstreamConnectionEvents[K]>
    ): void {
       this.listeners[type]?.forEach((cb) => (cb as any)(...args));
    }
@@ -125,12 +133,4 @@ export abstract class PuryFiUpstream {
          console.log("[PuryFi SDK]", ...args);
       }
    }
-}
-
-export function isVersion(value: unknown): value is string {
-   return typeof value === "string" && versionReg.test(value);
-}
-
-export function isAPIVersion(value: unknown): value is string {
-   return typeof value === "string" && apiVersionReg.test(value);
 }
