@@ -1,6 +1,6 @@
 # PuryFi Plugin SDK
 
-A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for internal state access, media processing, and more.
+A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for state access, media processing, and more.
 
 ## Table of Contents
 
@@ -81,7 +81,7 @@ connection.once("open", () => {
 
 ### Step 2 — Handle the Handshake
 
-Shortly after the connection opens, PuryFi sends a `ready` message containing its version and API version. Respond to this message to confirm compatibility. Responses are sent by simply returning on the message handler.
+Shortly after the connection opens, PuryFi sends a `ready` message containing its version and API version. Respond to this message to confirm compatibility. Responses are sent by returning on the message handler.
 
 ```typescript
 // ...
@@ -136,7 +136,7 @@ Plugins need to be granted intents to access most of the API. Get the intents yo
 // ...
 
 // Declare your desired intents.
-const intents: SDK.PluginIntent[] = ["readEnabled", "readWBlistConfiguration"];
+const intents: SDK.PluginIntent[] = ["readEnabled", "writeEnabled"];
 
 // Get the intents that have been granted in the past.
 const { intents: grantedIntents } = await connection
@@ -159,9 +159,9 @@ if (!intents.every((intent) => grantedIntents.includes(intent))) {
       connection.on(
          "message",
          "intentsGrant",
-         function listener({ intents: granted }) {
+         function listener({ intents: grantedIntents }) {
             // Check if all desired intents have been granted, and if so, proceed.
-            if (intents.every((i) => granted.includes(i))) {
+            if (intents.every((intent) => grantedIntents.includes(intent))) {
                connection.off("message", "intentsGrant", listener);
                resolve();
             }
@@ -384,7 +384,7 @@ A full WebSocket plugin that connects, handshakes, sets up configuration, and ha
 
 ```typescript
 import PuryFiSocket from "@pury-fi/plugin-sdk/socket";
-import { PuryFiConnection, PuryFiConnectionError } from "@pury-fi/plugin-sdk";
+import { Connection, ConnectionError } from "@pury-fi/plugin-sdk";
 import type {
    PluginManifest,
    PluginConfiguration,
@@ -392,7 +392,7 @@ import type {
 } from "@pury-fi/plugin-sdk";
 
 const upstream = new PuryFiSocket(8080);
-const connection = new PuryFiConnection(upstream);
+const connection = new Connection(upstream);
 
 upstream.setDebug(true);
 connection.setDebug(true);
@@ -415,7 +415,7 @@ let configuration: PluginConfiguration = {
 
 const intents: Intent[] = [];
 
-connection.on("error", (error: PuryFiConnectionError) => {
+connection.on("error", (error: ConnectionError) => {
    console.log(error.message);
 });
 

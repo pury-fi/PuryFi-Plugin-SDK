@@ -57,7 +57,8 @@ namespace IncomingMessages {
         }
       | {
            type: "error";
-           name: "incompatibleApiVersion";
+           name: "incompatibleApiVersion" | string;
+           message: string;
         };
 
    export type ConfigurationChange = (
@@ -154,7 +155,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -168,7 +169,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -182,7 +183,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -197,7 +198,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -211,7 +212,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -226,7 +227,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -240,7 +241,7 @@ namespace OutgoingMessages {
         }
       | {
            type: "error";
-           name: "internalError" | "invalidMessage" | "missingIntents";
+           name: "internalError" | "invalidMessage";
            message: string;
         };
 
@@ -376,8 +377,8 @@ namespace OutgoingMessages {
               | "internalError"
               | "invalidMessage"
               | "missingIntents"
-              | "noEnabledLock"
-              | "noEnabledLockPassword"
+              | "noSetLock"
+              | "noSetLockPassword"
               | "incorrectLockPassword";
         };
 
@@ -396,7 +397,7 @@ namespace OutgoingMessages {
               | "internalError"
               | "invalidMessage"
               | "missingIntents"
-              | "noEnabledLock"
+              | "noSetLock"
               | "incorrectLockEmergencyServerToken";
         };
 }
