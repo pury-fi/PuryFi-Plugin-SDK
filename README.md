@@ -136,7 +136,7 @@ Plugins need to be granted intents to access most of the API. Get the intents yo
 // ...
 
 // Declare your desired intents.
-const intents: SDK.PluginIntent[] = ["readEnabled", "writeEnabled"];
+const intents: SDK.PluginIntent[] = ["readEnabledState", "writeEnabledState"];
 
 // Get the intents that have been granted in the past.
 const { intents: grantedIntents } = await connection
@@ -200,17 +200,17 @@ Refer to [API Reference](#api-reference) for detailed documentation, and to [Exa
 
 Refer to [Quick Start](#quick-start) for how and when to request intents. This is the full list of intents and their description:
 
-| Intent                     | Description                                 |
-| -------------------------- | ------------------------------------------- |
-| `readEnabled`              | Read PuryFi's enabled/disabled state        |
-| `writeEnabled`             | Change PuryFi's enabled/disabled state      |
-| `readLockConfiguration`    | Read lock settings                          |
-| `writeLockConfiguration`   | Modify lock settings                        |
-| `readWBlistConfiguration`  | Read whitelist/blacklist configuration      |
-| `writeWBlistConfiguration` | Modify whitelist/blacklist configuration    |
-| `readUser`                 | Read the current user's profile information |
-| `readMediaProcesses`       | Receive real-time media scan events         |
-| `requestMediaProcesses`    | Scan and censor images through PuryFi       |
+| Intent                          | Description                                 |
+| ------------------------------- | ------------------------------------------- |
+| `readEnabledState`              | Read PuryFi's enabled/disabled state        |
+| `writeEnabledState`             | Change PuryFi's enabled/disabled state      |
+| `readLockConfigurationState`    | Read lock settings                          |
+| `writeLockConfigurationState`   | Modify lock settings                        |
+| `readWBlistConfigurationState`  | Read whitelist/blacklist configuration      |
+| `writeWBlistConfigurationState` | Modify whitelist/blacklist configuration    |
+| `readUserState`                 | Read the current user's profile information |
+| `readMediaProcessesState`       | Receive real-time media scan events         |
+| `requestMediaProcessesState`    | Scan and censor images through PuryFi       |
 
 ### Message Events
 

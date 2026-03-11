@@ -640,7 +640,7 @@ connection.on("message", "stateChange", async function listener({ objects }) {
 
 ## Outgoing `enterLockPassword`
 
-Requires the `writeLockConfiguration` intent.
+Requires the `writeLockConfigurationState` intent.
 
 Enters a password for the set lock. If the password matches the one set for the lock, the lock is removed.
 
@@ -677,18 +677,18 @@ Enters a password for the set lock. If the password matches the one set for the 
 }
 ```
 
-| Error Name              | Description                                                 |
-| ----------------------- | ----------------------------------------------------------- |
-| `incorrectLockPassword` | The passed password does not match the one set for the lock |
-| `noSetLockPassword`     | No lock with a password is set                              |
-| `noSetLock`             | No lock is set                                              |
-| `missingIntents`        | The `writeLockConfiguration` intent has not been granted    |
-| `invalidMessage`        | The message was malformed                                   |
-| `internalError`         | Something went wrong inside PuryFi                          |
+| Error Name              | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `incorrectLockPassword` | The passed password does not match the one set for the lock   |
+| `noSetLockPassword`     | No lock with a password is set                                |
+| `noSetLock`             | No lock is set                                                |
+| `missingIntents`        | The `writeLockConfigurationState` intent has not been granted |
+| `invalidMessage`        | The message was malformed                                     |
+| `internalError`         | Something went wrong inside PuryFi                            |
 
 ## Outgoing `enterLockEmergencyServerToken`
 
-Requires the `writeLockConfiguration` intent.
+Requires the `writeLockConfigurationState` intent.
 
 Enters an emergency server token for the set lock. If the token matches the one expected given the emergency client token of the lock, the lock is removed.
 
@@ -728,13 +728,13 @@ Enters an emergency server token for the set lock. If the token matches the one 
 | ----------------------------------- | ------------------------------------------------------------------------------ |
 | `incorrectLockEmergencyServerToken` | The passed emergency server token does not match the expected one for the lock |
 | `noSetLock`                         | No lock is set                                                                 |
-| `missingIntents`                    | The `writeLockConfiguration` intent has not been granted                       |
+| `missingIntents`                    | The `writeLockConfigurationState` intent has not been granted                  |
 | `invalidMessage`                    | The message was malformed                                                      |
 | `internalError`                     | Something went wrong inside PuryFi                                             |
 
 ## Outgoing `scanStaticMedia`
 
-Requires the `requestMediaProcesses` intent.
+Requires the `requestMediaProcessesState` intent.
 
 Scan a static image.
 
@@ -767,12 +767,12 @@ Scan a static image.
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `invalidImage`   | The image data could not be decoded                          |
+| `missingIntents` | The `requestMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                    |
+| `internalError`  | Something went wrong inside PuryFi                           |
 
 ### Examples
 
@@ -794,7 +794,7 @@ if (res.type === "ok") {
 
 ## Outgoing `censorStaticMedia`
 
-Requires the `requestMediaProcesses` intent.
+Requires the `requestMediaProcessesState` intent.
 
 Censor a static image.
 
@@ -829,12 +829,12 @@ Censor a static image.
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `invalidImage`   | The image data could not be decoded                          |
+| `missingIntents` | The `requestMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                    |
+| `internalError`  | Something went wrong inside PuryFi                           |
 
 ### Examples
 
@@ -873,7 +873,7 @@ if (scanRes.type === "ok") {
 
 ## Outgoing `watchStaticMediaScans`
 
-Requires the `readMediaProcesses` intent.
+Requires the `readMediaProcessesState` intent.
 
 Subscribe to static media scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans) for the outgoing message to unsubscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
@@ -897,11 +897,11 @@ Subscribe to static media scan events happening as the user browses. Refer to [`
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name       | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `missingIntents` | The `readMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                 |
+| `internalError`  | Something went wrong inside PuryFi                        |
 
 ### Examples
 
@@ -909,7 +909,7 @@ Refer to [`staticMediaScan`](#incoming-staticmediascan) for examples.
 
 ## Outgoing `unwatchStaticMediaScans`
 
-Requires the static media `readMediaProcesses` intent.
+Requires the static media `readMediaProcessesState` intent.
 
 Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#outgoing-watchstaticmediascans) for the outgoing message to subscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
@@ -933,11 +933,11 @@ Unsubscribe from scan events happening as the user browses. Refer to [`watchStat
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name       | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `missingIntents` | The `readMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                 |
+| `internalError`  | Something went wrong inside PuryFi                        |
 
 ### Examples
 
@@ -989,17 +989,17 @@ connection.on(
 
 Intents are required for sending and receiving most messages. Refer to [`requestIntents`](#outgoing-requestintents) for the outgoing message to request intents, [`getPendingIntents`](#outgoing-getpendingintents) for the outgoing message to get pending intents, and [`getIntents`](#outgoing-getintents) for the outgoing message to get granted intents.
 
-| Intent                     | Description                                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `readEnabled`              | Allows sending the `getState`, `watchState`, and `unwatchState` messages with the `enabled` path.            |
-| `writeEnabled`             | Allows sending the `setState` message with the `enabled` path.                                               |
-| `readLockConfiguration`    | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `lockConfiguration.*` paths.   |
-| `writeLockConfiguration`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                      |
-| `readWBlistConfiguration`  | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `wblistConfiguration.*` paths. |
-| `writeWBlistConfiguration` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                    |
-| `readUser`                 | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `user.*` paths.                |
-| `requestMediaProcesses`    | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                       |
-| `readMediaProcesses`       | Allows sending the `watchStaticMediaScans` and `unwatchStaticMediaScans` messages.                           |
+| Intent                          | Description                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `readEnabledState`              | Allows sending the `getState`, `watchState`, and `unwatchState` messages with the `enabled` path.            |
+| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                               |
+| `readLockConfigurationState`    | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `lockConfiguration.*` paths.   |
+| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                      |
+| `readWBlistConfigurationState`  | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `wblistConfiguration.*` paths. |
+| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                    |
+| `readUserState`                 | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `user.*` paths.                |
+| `requestMediaProcessesState`    | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                       |
+| `readMediaProcessesState`       | Allows sending the `watchStaticMediaScans` and `unwatchStaticMediaScans` messages.                           |
 
 ## Types
 
@@ -1037,17 +1037,17 @@ Intents are required for sending and receiving most messages. Refer to [`request
 
 Refer to the [Intents](#intents) section for what these intents allow.
 
-| Value                      |
-| -------------------------- |
-| `readEnabled`              |
-| `writeEnabled`             |
-| `readLockConfiguration`    |
-| `writeLockConfiguration`   |
-| `readWBlistConfiguration`  |
-| `writeWBlistConfiguration` |
-| `readUser`                 |
-| `readMediaProcesses`       |
-| `requestMediaProcesses`    |
+| Value                           |
+| ------------------------------- |
+| `readEnabledState`              |
+| `writeEnabledState`             |
+| `readLockConfigurationState`    |
+| `writeLockConfigurationState`   |
+| `readWBlistConfigurationState`  |
+| `writeWBlistConfigurationState` |
+| `readUserState`                 |
+| `readMediaProcessesState`       |
+| `requestMediaProcessesState`    |
 
 ## `State`
 

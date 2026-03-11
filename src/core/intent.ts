@@ -1,12 +1,12 @@
 export const PluginIntents = [
-   "readEnabled",
-   "writeEnabled",
-   "readLockConfiguration",
-   "writeLockConfiguration",
-   "readWBlistConfiguration",
-   "writeWBlistConfiguration",
-   "readUser",
-   "readMediaProcesses",
-   "requestMediaProcesses",
+   "readEnabledState",
+   "writeEnabledState",
+   "readLockConfigurationState",
+   "writeLockConfigurationState",
+   "readWBlistConfigurationState",
+   "writeWBlistConfigurationState",
+   "readUserState",
+   "readMediaProcessesState",
+   "requestMediaProcessesState",
 ] as const;
 export type PluginIntent = (typeof PluginIntents)[number];

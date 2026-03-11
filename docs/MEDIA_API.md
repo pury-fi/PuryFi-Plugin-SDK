@@ -35,10 +35,10 @@ Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming mes
 
 See the [Intents section in the README](../README.md#intents) for the full list of intents.
 
-| Intent                  | Enables                                                                   |
-| ----------------------- | ------------------------------------------------------------------------- |
-| `requestMediaProcesses` | `scanStaticMedia`, `censorStaticMedia`                                    |
-| `readMediaProcesses`    | `watchStaticMediaScans`, `unwatchStaticMediaScans`, and `staticMediaScan` |
+| Intent                       | Enables                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| `requestMediaProcessesState` | `scanStaticMedia`, `censorStaticMedia`                                    |
+| `readMediaProcessesState`    | `watchStaticMediaScans`, `unwatchStaticMediaScans`, and `staticMediaScan` |
 
 ## Messages
 
@@ -75,12 +75,12 @@ Scan a static image.
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `invalidImage`   | The image data could not be decoded                          |
+| `missingIntents` | The `requestMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                    |
+| `internalError`  | Something went wrong inside PuryFi                           |
 
 ### Examples
 
@@ -135,12 +135,12 @@ Censor a static image.
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `invalidImage`   | The image data could not be decoded                          |
+| `missingIntents` | The `requestMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                    |
+| `internalError`  | Something went wrong inside PuryFi                           |
 
 ### Examples
 
@@ -201,11 +201,11 @@ Subscribe to scan events happening as the user browses. Refer to [`unwatchStatic
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name       | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `missingIntents` | The `readMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                 |
+| `internalError`  | Something went wrong inside PuryFi                        |
 
 ### Examples
 
@@ -235,11 +235,11 @@ Unsubscribe from scan events happening as the user browses. Refer to [`watchStat
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name       | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `missingIntents` | The `readMediaProcessesState` intent has not been granted |
+| `invalidMessage` | The message was malformed                                 |
+| `internalError`  | Something went wrong inside PuryFi                        |
 
 ### Examples
 

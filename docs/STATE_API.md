@@ -24,7 +24,6 @@
    - [`UserSupportTier`](#usersupporttier)
 - [Quick Reference](#quick-reference)
 
-
 ## Overview
 
 The State API lets plugins read, write, and watch PuryFi's state using dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Each path has an access level controlling which operations are allowed.
@@ -43,15 +42,15 @@ Outgoing messages are sent with `PuryFiConnection.sendMessage`, and incoming mes
 
 See the [Intents section in the README](../README.md#intents) for the full list of intents.
 
-| Intent                     | Enables                                                                                      |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `readEnabled`              | `getState`, `watchState`, `unwatchState`, and `stateChange` on `enabled` path                |
-| `writeEnabled`             | `setState` on `enabled` path                                                                 |
-| `readLockConfiguration`    | `getState`, `watchState`, `unwatchState`, and `stateChange` on `lockConfiguration.*` paths   |
-| `writeLockConfiguration`   | `setState` on `lockConfiguration.*` paths                                                    |
-| `readWBlistConfiguration`  | `getState`, `watchState`, `unwatchState`, and `stateChange` on `wblistConfiguration.*` paths |
-| `writeWBlistConfiguration` | `setState` on `wblistConfiguration.*` paths                                                  |
-| `readUser`                 | `getState`, `watchState`, `unwatchState`, and `stateChange` on `user.*` paths                |
+| Intent                          | Enables                                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `readEnabledState`              | `getState`, `watchState`, `unwatchState`, and `stateChange` on `enabled` path                |
+| `writeEnabledState`             | `setState` on `enabled` path                                                                 |
+| `readLockConfigurationState`    | `getState`, `watchState`, `unwatchState`, and `stateChange` on `lockConfiguration.*` paths   |
+| `writeLockConfigurationState`   | `setState` on `lockConfiguration.*` paths                                                    |
+| `readWBlistConfigurationState`  | `getState`, `watchState`, `unwatchState`, and `stateChange` on `wblistConfiguration.*` paths |
+| `writeWBlistConfigurationState` | `setState` on `wblistConfiguration.*` paths                                                  |
+| `readUserState`                 | `getState`, `watchState`, `unwatchState`, and `stateChange` on `user.*` paths                |
 
 ## Messages
 

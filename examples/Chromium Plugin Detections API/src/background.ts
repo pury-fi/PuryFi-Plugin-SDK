@@ -27,10 +27,10 @@ upstreamConnection.setDebug(true);
 connection.setDebug(true);
 
 const intents: Intent[] = [
-   "readEnabled",
-   "readWBlistConfiguration",
-   "readMediaProcesses",
-   "readUser",
+   "readEnabledState",
+   "readWBlistConfigurationState",
+   "readMediaProcessesState",
+   "readUserState",
 ];
 
 const manifest: PluginManifest = {
@@ -148,9 +148,7 @@ connection.once("connection", async () => {
       path: "enabled",
    });
    if (enabledRes.type === "ok") {
-      console.log(
-         `PuryFi is ${enabledRes.value ? "enabled" : "disabled"}`
-      );
+      console.log(`PuryFi is ${enabledRes.value ? "enabled" : "disabled"}`);
    }
 
    const userRes = await connection.sendMessage("getState", {
@@ -229,8 +227,7 @@ connection.once("connection", async () => {
          const labelName = Label[obj.label] ?? `Unknown(${obj.label})`;
 
          // Track per-label counts
-         detectionsByLabel[obj.label] =
-            (detectionsByLabel[obj.label] ?? 0) + 1;
+         detectionsByLabel[obj.label] = (detectionsByLabel[obj.label] ?? 0) + 1;
 
          console.log(
             `  ${labelName} — score: ${obj.score.toFixed(2)}, ` +

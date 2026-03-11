@@ -14,21 +14,21 @@ This plugin connects to PuryFi and demonstrates the **Media Processing API**:
 
 ## Intents Used
 
-| Intent | Purpose |
-|--------|---------|
-| `readEnabled` | Read and watch the enabled/disabled state |
-| `readWBlistConfiguration` | Read whitelist/blacklist settings |
-| `readMediaProcesses` | Subscribe to live media scan results |
-| `readUser` | Read the current user profile |
+| Intent                         | Purpose                                   |
+| ------------------------------ | ----------------------------------------- |
+| `readEnabledState`             | Read and watch the enabled/disabled state |
+| `readWBlistConfigurationState` | Read whitelist/blacklist settings         |
+| `readMediaProcessesState`      | Subscribe to live media scan results      |
+| `readUserState`                | Read the current user profile             |
 
 ## Configuration Fields
 
 The plugin exposes two user-editable settings in the PuryFi UI:
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `scoreThreshold` | number | `0.7` | Minimum confidence score for a detection to be logged |
-| `logFaces` | boolean | `false` | Whether to include face detections in the output |
+| Field            | Type    | Default | Description                                           |
+| ---------------- | ------- | ------- | ----------------------------------------------------- |
+| `scoreThreshold` | number  | `0.7`   | Minimum confidence score for a detection to be logged |
+| `logFaces`       | boolean | `false` | Whether to include face detections in the output      |
 
 ## Running the Example
 
