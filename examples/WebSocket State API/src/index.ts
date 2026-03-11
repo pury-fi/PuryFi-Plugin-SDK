@@ -24,12 +24,12 @@ server.on("connection", (connection) => {
    connection.setDebug(true);
 
    const intents: PluginIntent[] = [
-      "readEnabled",
-      "writeEnabled",
-      "readLockConfiguration",
-      "readWBlistConfiguration",
-      "writeWBlistConfiguration",
-      "readUser",
+      "readEnabledState",
+      "writeEnabledState",
+      "readLockConfigurationState",
+      "readWBlistConfigurationState",
+      "writeWBlistConfigurationState",
+      "readUserState",
    ];
 
    const manifest: PluginManifest = {

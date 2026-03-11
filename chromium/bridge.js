@@ -1,3 +1,11 @@
+/**
+ * PuryFi Plugin SDK - Chromium Bridge
+ *
+ * This bridge enables efficient binary communication between PuryFi and Chromium-based browser extensions, bypassing the JSON encoding of runtime messaging.
+ *
+ * Do not modify this file. It is designed to be copied into your extension's source directory and loaded by `bridge.html`. The SDK will automatically use this bridge on Chromium browsers and ignore it on Firefox.
+ */
+
 let peerPort = null;
 const bc = new BroadcastChannel("puryfi-binary-bus");
 

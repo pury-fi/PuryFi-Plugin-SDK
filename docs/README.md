@@ -1,6 +1,6 @@
 # PuryFi State API Reference
 
-> Read and write PuryFi's state.
+> This is the reference documentation for PuryFi's State API. For a quick start guide on how to use this API, refer to [Quick Start](/README.md#quick-start).
 
 ## Table of Contents
 
@@ -64,8 +64,8 @@ What messages allow what functionality can be broken down as follows:
 
 - Incoming `ready`: Receive PuryFi's version and API version. This message must be responded to with a success response before any other messages are sent or received.
 - Outgoing `setManifest`, `getManifest`, `setConfiguration`, and `getConfiguration`, and incoming `configurationChange`: Get and set the manifest and user-adjustable configuration of the plugin.
-- Outgoing `requestIntents`, `getPendingIntents`, and `getIntents`, and incoming `intentsGrant`: Request and wait for intents to be granted. Intents are required for sending and receiving most messages. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
-- Outgoing `setState`, `getState`, `watchState`, and `unwatchState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to the type [State](#state) for all paths, and the types and access levels at each path.
+- Outgoing `requestIntents`, `getPendingIntents`, and `getIntents`, and incoming `intentsGrant`: Request and wait for intents to be granted. Intents are required for sending and receiving most messages. Refer to [Intents](#intents) for a full list of intents and what they allow.
+- Outgoing `setState`, `getState`, `watchState`, and `unwatchState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
 - Outgoing `scanStaticMedia`, `censorStaticMedia`, `watchStaticMediaScans`, and `unwatchStaticMediaScans`, and incoming `staticMediaScan`: Scan and censor images, and subscribe to media process events happening as the user browses.
 - Outgoing `enterLockPassword` and `enterLockEmergencyServerToken`: Perform various actions also available to users through PuryFi's UI. Currently this includes entering a password and entering an emergency server token for a set lock.
 
@@ -257,7 +257,7 @@ Received when the plugin configuration changes.
 
 ## Outgoing `requestIntents`
 
-Request intents to be granted. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
+Request intents to be granted. Refer to [Intents](#intents) for a full list of intents and what they allow.
 
 ### Arguments
 
@@ -354,9 +354,9 @@ Get the granted intents.
 
 ## Outgoing `getState`
 
-Requires various intents to read at various paths. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
+Requires various intents to read at various paths. Refer to [Intents](#intents) for a full list of intents and what they allow.
 
-Get the value at a path into state. Refer to the type [State](#state) for all paths, and the types and access levels at each path.
+Get the value at a path into state. Refer to [State](#state) for all paths, and the types and access levels at each path.
 
 ### Arguments
 
@@ -443,9 +443,9 @@ if (res.type === "ok") {
 
 ## Outgoing `setState`
 
-Requires various intents to write at various paths. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
+Requires various intents to write at various paths. Refer to [Intents](#intents) for a full list of intents and what they allow.
 
-Set the value at a path into state. Refer to the type [State](#state) for all paths, and the types and access levels at each path.
+Set the value at a path into state. Refer to [State](#state) for all paths, and the types and access levels at each path.
 
 ### Arguments
 
@@ -512,7 +512,7 @@ await connection.sendMessage("setState", {
 
 ## Outgoing `watchState`
 
-Requires different intents depending on the passed path. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
+Requires different intents depending on the passed path. Refer to [Intents](#intents) for a full list of intents and what they allow.
 
 Subscribe to value change events at a path into state. Refer to [`unwatchState`](#outgoing-unwatchstate) for the outgoing message to unsubscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
@@ -556,7 +556,7 @@ Refer to [`stateChange`](#incoming-statechange) for examples.
 
 ## Outgoing `unwatchState`
 
-Requires different intents depending on the passed path. Refer to the [Intents](#intents) section for a full list of intents and what they allow.
+Requires different intents depending on the passed path. Refer to [Intents](#intents) for a full list of intents and what they allow.
 
 Unsubscribe from value change events at a path into state. Refer to [`watchState`](#outgoing-watchstate) for the outgoing message to subscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
@@ -1035,7 +1035,7 @@ Intents are required for sending and receiving most messages. Refer to [`request
 
 ## `PluginIntent`
 
-Refer to the [Intents](#intents) section for what these intents allow.
+Refer to [Intents](#intents) for what these intents allow.
 
 | Value                           |
 | ------------------------------- |
@@ -1206,7 +1206,7 @@ The root state object. Paths passed to `getState`, `setState`, `watchState`, and
 ```typescript
 {
    rect: Rect; // The coordinates of the object. The cordinates go from 0 to 1.
-   label: number; // The "kind" of object detected. You can try mapping this to a [`Label`](#labels) for easier interpretation.
+   label: number; // The "kind" of object detected. You can try mapping this to a Label for easier interpretation.
    score: number; // The confidence on the object being accurate. Goes from 0 to 1.
    id: number; // Unique ID of the object.
 }
