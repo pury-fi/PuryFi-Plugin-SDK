@@ -306,6 +306,7 @@ export class Connection {
          return {
             type: "error",
             name: "incompatibleApiVersion",
+            message: "Not compatible with the offered plugin API version",
          };
       }
 
