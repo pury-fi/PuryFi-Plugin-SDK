@@ -296,7 +296,9 @@ export abstract class Connection {
    }
 
    handleReadyMessage(
-      payload: PayloadArgument<ExtractByTypeArgument<IncomingMessage, "ready">>
+      payload: Readonly<
+         PayloadArgument<ExtractByTypeArgument<IncomingMessage, "ready">>
+      >
    ): Return<ExtractByTypeArgument<IncomingMessage, "ready">> {
       const parsedApiVersion = parseVersion(payload.apiVersion, 3)!;
       if (

@@ -1,0 +1,108 @@
+import * as SDK from "@pury-fi/plugin-sdk/websocket";
+
+// Step 1 — Open a Connection
+
+// Open a WebSocket server at a given port for PuryFi to connect to.
+const server = new SDK.WebSocketServer(8080);
+
+// Wait for a connection.
+server.once("connection", (connection) => {
+   // Wait for the connection to open.
+   connection.once("open", async () => {
+      // Step 2 — Handle the Handshake
+
+      // Wait for the ready message.
+      await new Promise<void>((resolve) => {
+         connection.once("message", "ready", (payload) => {
+            // Delegate responding to the connection itself. The connection will return an error response if the API version is of a different major than the SDK was built for, which should be the correct course of action in the majority of cases.
+            const res = connection.handleReadyMessage(payload);
+            if (res.type === "ok") {
+               resolve();
+            }
+            return res;
+         });
+      });
+
+      // Step 3 — Send a Manifest and Configuration
+
+      // Declare and send a manifest.
+      let manifest: SDK.PluginManifest = {
+         name: "Minimal Plugin",
+         version: "1.0.0",
+         description: "A minimal WebSocket plugin example",
+         author: null,
+         website: null,
+      };
+      await connection.sendMessage("setManifest", { manifest }).then((res) => {
+         // Throw if we get an error response.
+         if (res.type === "error") {
+            console.error("Failed to set manifest:", res);
+         }
+      });
+
+      // Declare and send a configuration.
+      let configuration: SDK.PluginConfiguration = {};
+      await connection
+         .sendMessage("setConfiguration", { configuration })
+         .then((res) => {
+            // Throw if we get an error response.
+            if (res.type === "error") {
+               console.error("Failed to set configuration:", res);
+            }
+         });
+
+      // Handle configuration change events.
+      connection.on("message", "configurationChange", (payload) => {
+         // Assign the new configuration.
+         configuration = payload.configuration;
+      });
+
+      // Step 4 — Request Intents
+
+      // Declare your desired intents.
+      const intents: SDK.PluginIntent[] = [];
+
+      // Get the intents that have been granted in the past.
+      const { intents: grantedIntents } = await connection
+         .sendMessage("getIntents", {})
+         .then((res) => {
+            // Throw if we get an error response.
+            if (res.type === "error") {
+               throw new Error(`Failed to get intents: ${res.message}`);
+            }
+            return res;
+         });
+
+      // Check if any desired intents have not been granted.
+      if (!intents.every((intent) => grantedIntents.includes(intent))) {
+         // Request the desired intents.
+         await connection
+            .sendMessage("requestIntents", { intents })
+            .then((res) => {
+               // Throw if we get an error response.
+               if (res.type === "error") {
+                  console.error("Failed to request intents:", res);
+               }
+            });
+
+         // Wait for intents to be granted.
+         await new Promise<void>((resolve) => {
+            connection.on(
+               "message",
+               "intentsGrant",
+               function listener({ intents: grantedIntents }) {
+                  // Check if all desired intents have been granted, and if so, proceed.
+                  if (
+                     intents.every((intent) => grantedIntents.includes(intent))
+                  ) {
+                     connection.off("message", "intentsGrant", listener);
+                     resolve();
+                  }
+               }
+            );
+         });
+      }
+
+      // Implement the main functionality of the plugin here...
+   });
+});

@@ -6,6 +6,7 @@ export * from "./intent.js";
 export * from "./configuration.js";
 export {
    State,
+   StateAccess,
    Path,
    Value,
    ReadOnlyPath,

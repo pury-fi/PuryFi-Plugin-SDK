@@ -79,10 +79,16 @@ Shortly after the connection opens, PuryFi sends a `ready` message containing it
 // ...
 
 // Wait for the ready message.
-connection.once("message", "ready", (payload) => {
-   // Delegate responding to the connection itself. The connection will return a error response if the API version is of a different major than the SDK was built for, which should be the correct course of action in the majority of cases.
-   // Note that choosing to not delegate and instead respond yourself is also an option.
-   return connection.handleReadyMessage(payload);
+await new Promise<void>((resolve) => {
+   connection.once("message", "ready", (payload) => {
+      // Delegate responding to the connection itself. The connection will return a error response if the API version is of a different major than the SDK was built for, which should be the correct course of action in the majority of cases.
+      // Note that choosing to not delegate and instead respond yourself is also an option.
+      const res = connection.handleReadyMessage(payload);
+      if (res.type === "ok") {
+         resolve();
+      }
+      return res;
+   });
 });
 ```
 
@@ -95,9 +101,9 @@ Optionally, send a manifest and an user-adjustable configuration. These can be s
 
 // Declare and send a manifest.
 let manifest: SDK.PluginManifest = {
-   name: "My Plugin",
+   name: "Example Plugin",
    version: "1.0.0",
-   description: "Does useful things",
+   description: "A plugin example",
    author: null,
    website: null,
 };
@@ -106,9 +112,9 @@ await connection.sendMessage("setManifest", { manifest });
 // Declare and send a configuration.
 let configuration: SDK.PluginConfiguration = {
    threshold: {
-      value: 0.8,
+      value: 0,
       type: "number",
-      name: "Detection Threshold",
+      name: "Example Field",
    },
 };
 await connection.sendMessage("setConfiguration", { configuration });
@@ -147,7 +153,7 @@ if (!intents.every((intent) => grantedIntents.includes(intent))) {
    await connection.sendMessage("requestIntents", { intents });
 
    // Wait for intents to be granted.
-   await new Promise<void>(async (resolve) => {
+   await new Promise<void>((resolve) => {
       connection.on(
          "message",
          "intentsGrant",
@@ -192,8 +198,8 @@ Refer to the [Documentation](/docs/README.md) for detailed documentation, and to
 
 > Chromium's runtime messaging JSON-encodes message payloads, which degrades performance for binary data like images. A bridge workaround is required for Chromium-based browsers. If your extension targets both Firefox and Chromium, you can still apply these steps as the SDK ignores the bridge on Firefox at runtime.
 
-1. Copy `chromium/bridge.html` to your extension's public/output directory
-2. Copy `chromium/bridge.js` to your extension's source directory — the `<script>` tag in `bridge.html` must be able to load it. Do not modify the bridge files
+1. Copy `chromium/bridge.html` to your extension's root directory
+2. Copy `chromium/bridge.js` to your extension's root directory — the `<script>` tag in `bridge.html` must be able to load it. Do not modify the bridge files
 3. Add the bridge files as web-accessible resources in your `manifest.json`:
 
 ```json
