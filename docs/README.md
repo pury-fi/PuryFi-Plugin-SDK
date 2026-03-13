@@ -1,6 +1,6 @@
 # Plugin SDK Documentation
 
-> Documentation for PuryFi's Plugin SDK. For a guide for how to quickly get started, refer to [Quick Start](/README.md#quick-start).
+> Documentation for PuryFi's Plugin SDK. For a quick start guide, refer to [Quick Start](/README.md#quick-start). For entire example plugins, refer to [Examples](/examples/README.md).
 
 ## Table of Contents
 

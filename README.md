@@ -192,7 +192,7 @@ const { pendingIntents } = await connection
 
 After this point you may implement the main functionality of your plugin, remembering to update your desired plugins as needed and reacting to configuration changes if necessary.
 
-Refer to the [Documentation](/docs/README.md) for detailed documentation, and to the `examples` folder for complete example plugins.
+For documentation, refer to [Documentation](/docs/README.md), and for entire example plugins, refer to [Examples](/examples/README.md).
 
 ## Chromium Bridge Setup
 
@@ -215,7 +215,7 @@ Refer to the [Documentation](/docs/README.md) for detailed documentation, and to
 
 PuryFi loads `bridge.html` in an offscreen iframe and transfers a MessageChannel port to your extension. This port replaces Chromium's runtime API for binary messaging.
 
-See the `examples` folder for entire examples of browser extension plugins using the bridge.
+Refer to [Examples](/examples/README.md) for entire examples of browser extension plugins using the bridge.
 
 ## Development
 
