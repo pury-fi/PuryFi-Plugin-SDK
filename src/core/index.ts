@@ -14,7 +14,3 @@ export {
    WriteOnlyValue,
 } from "./state.js";
 export * from "./object.js";
-export {
-   UpstreamConnection,
-   UpstreamConnectionEvents,
-} from "./upstream-connection.js";

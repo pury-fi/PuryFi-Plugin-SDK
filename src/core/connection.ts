@@ -13,7 +13,6 @@ import {
    maxApiVersion,
    minApiVersion,
    parseVersion,
-   UpstreamConnection,
 } from "./upstream-connection.js";
 import { isNumber, isObject, isUndefined } from "./type-util.js";
 import { ReadOnlyPath, ReadOnlyValue } from "./state.js";
@@ -41,7 +40,7 @@ export type TypedConnectionMessageEventListener<T> = (
    currentResponse: undefined | Return<T>
 ) => Return<T> | Promise<Return<T>>;
 
-export class Connection {
+export abstract class Connection {
    private messageListeners: {
       [K in TypeArgument<IncomingMessage>]?: Set<
          TypedConnectionMessageEventListener<
@@ -71,15 +70,16 @@ export class Connection {
    private nextResponseId = 0;
    private debug: boolean = false;
 
-   /**
-    * Creates a new connection to PuryFi.
-    * @param upstream The upstream connection
-    */
-   constructor(public upstream: UpstreamConnection) {
-      upstream.on("message", (data) => this.handleMessage(data));
-      upstream.on("error", (error) => this.handleError(error));
-      upstream.on("open", () => this.handleOpen());
-      upstream.on("close", () => this.handleClose());
+   abstract send(data: ArrayBuffer | string): void;
+
+   encodeMessage(message: any): ArrayBuffer {
+      const encodedMessage = encode(message);
+
+      const encodedMessageSlice = encodedMessage.buffer.slice(
+         encodedMessage.byteOffset,
+         encodedMessage.byteOffset + encodedMessage.byteLength
+      );
+      return encodedMessageSlice;
    }
 
    /**
@@ -284,12 +284,12 @@ export class Connection {
          const responseId = this.nextResponseId;
          this.nextResponseId++;
 
-         const encodedMessage = this.upstream.encodeMessage({
+         const encodedMessage = this.encodeMessage({
             type,
             payload,
             responseId,
          });
-         this.upstream.send(encodedMessage);
+         this.send(encodedMessage);
 
          this.responseListeners[responseId] = [resolve, reject];
       });
@@ -368,13 +368,13 @@ export class Connection {
       return currentResponse;
    }
 
-   private log(...args: any[]) {
+   protected log(...args: any[]) {
       if (this.debug) {
          console.log("[PuryFi SDK]", ...args);
       }
    }
 
-   private handleMessage(payload: any) {
+   protected handleMessage(payload: any) {
       // TODO: Catch errors here
 
       let message = decode(payload);
@@ -432,11 +432,11 @@ export class Connection {
          }
 
          if (isExpectingResponse && response !== undefined) {
-            const encodedMessage = this.upstream.encodeMessage({
+            const encodedMessage = this.encodeMessage({
                payload: response,
                responseId: message.responseId,
             });
-            this.upstream.send(encodedMessage);
+            this.send(encodedMessage);
          }
       }
    }
@@ -445,7 +445,7 @@ export class Connection {
     * Handles an upstream connection open event.
     * @param event The open event
     */
-   private handleOpen() {
+   protected handleOpen() {
       this.log("Upstream connection open");
       this.emit("open");
    }
@@ -453,7 +453,7 @@ export class Connection {
    /**
     * Handles an upstream connection close event.
     */
-   private handleClose() {
+   protected handleClose() {
       this.log("Upstream connection closed");
       this.emit("close");
    }
@@ -462,7 +462,7 @@ export class Connection {
     * Handles an error event from upstream connection.
     * @param error The error
     */
-   private handleError(error: ConnectionError) {
+   protected handleError(error: ConnectionError) {
       this.log("Upstream connection error:", error);
       this.emit("error", error);
    }

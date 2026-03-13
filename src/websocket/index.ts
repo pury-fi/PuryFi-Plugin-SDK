@@ -1,5 +1,6 @@
+export * from "../core/index.js";
+
 import * as ws from "ws";
-import { UpstreamConnection } from "../core/upstream-connection.js";
 import { Connection, ConnectionError } from "../core/index.js";
 
 export type SocketEvents = {
@@ -11,6 +12,7 @@ export class WebSocketServer {
    private socketServer: ws.WebSocketServer;
    private debug: boolean = false;
    protected listeners: { [K: string]: Set<(...args: any[]) => void> } = {};
+   protected onceListeners: { [K: string]: Set<(...args: any[]) => void> } = {};
 
    private getSet<K extends keyof SocketEvents>(type: K): Set<SocketEvents[K]> {
       const existing = this.listeners[type];
@@ -19,6 +21,18 @@ export class WebSocketServer {
       const created = new Set<SocketEvents[K]>();
       // @ts-ignore yes typescript, I know what I'm doing
       this.listeners[type] = created;
+      return created;
+   }
+
+   private getOnceSet<K extends keyof SocketEvents>(
+      type: K
+   ): Set<SocketEvents[K]> {
+      const existing = this.onceListeners[type];
+      if (existing) return existing;
+
+      const created = new Set<SocketEvents[K]>();
+      // @ts-ignore yes typescript, I know what I'm doing
+      this.onceListeners[type] = created;
       return created;
    }
 
@@ -42,6 +56,20 @@ export class WebSocketServer {
    on = this.addListener;
 
    /**
+    * Register a one-time event listener. The callback is removed after it fires once.
+    * @param type The event
+    * @param callback The callback
+    * @returns
+    */
+   once<K extends keyof SocketEvents>(
+      type: K,
+      callback: SocketEvents[K]
+   ): this {
+      this.getOnceSet(type).add(callback);
+      return this;
+   }
+
+   /**
     * Unregister an event listener.
     * @param type The event
     * @param callback The callback
@@ -62,6 +90,8 @@ export class WebSocketServer {
       ...args: Parameters<SocketEvents[K]>
    ): void {
       this.listeners[type]?.forEach((cb) => (cb as any)(...args));
+      this.onceListeners[type]?.forEach((cb) => (cb as any)(...args));
+      this.onceListeners[type]?.clear();
    }
 
    protected log(...args: any[]) {
@@ -104,13 +134,13 @@ export class WebSocketServer {
 
          ws.binaryType = "arraybuffer";
          let instance = new WebSocketConnection(ws, this.debug);
-         this.emit("connection", new Connection(instance));
+         this.emit("connection", instance);
          instance.open();
       });
    }
 }
 
-export class WebSocketConnection extends UpstreamConnection {
+export class WebSocketConnection extends Connection {
    private client: ws.WebSocket | null = null;
 
    send(data: ArrayBuffer | string): void {
@@ -120,7 +150,7 @@ export class WebSocketConnection extends UpstreamConnection {
    }
 
    open() {
-      this.emit("open");
+      this.handleOpen();
    }
 
    constructor(ws: ws.WebSocket, debug: boolean = false) {
@@ -130,19 +160,19 @@ export class WebSocketConnection extends UpstreamConnection {
       ws.binaryType = "arraybuffer";
       this.client = ws;
 
-      ws.on("message", (data: ws.WebSocket.Data) => {
+      ws.on("message", (data: ws.RawData) => {
          this.log("Received message from client on WebSocket connection");
          let binaryData = data as ArrayBuffer;
-         this.emit("message", binaryData);
+         this.handleMessage(binaryData);
       });
       ws.on("close", () => {
          this.log("Client disconnected from WebSocket connection");
          this.client = null;
-         this.emit("close");
+         this.handleClose();
       });
       ws.on("error", (err: Error) => {
          this.log("Client error on WebSocket connection", err.message);
-         this.emit("error", new ConnectionError("SocketError", err.message));
+         this.handleError(new ConnectionError("SocketError", err.message));
       });
    }
 }

@@ -1,5 +1,6 @@
-import { ConnectionError } from "../core/connection.js";
-import { UpstreamConnection } from "../core/upstream-connection.js";
+export * from "../core/index.js";
+
+import { Connection, ConnectionError } from "../core/connection.js";
 
 const extension = globalThis.browser ?? globalThis.chrome;
 
@@ -12,7 +13,7 @@ function isChromiumExtension(): boolean {
    return chrome.runtime.getManifest().manifest_version === 3;
 }
 
-export default class BrowserExtensionConnection extends UpstreamConnection {
+export class BrowserExtensionConnection extends Connection {
    private upstream: BroadcastChannel | browser.runtime.Port | null = null;
 
    constructor() {
@@ -42,36 +43,35 @@ export default class BrowserExtensionConnection extends UpstreamConnection {
                      this.send(ping);
                   }, 2000);
                   initialized = true;
-                  this.emit("open");
+                  this.handleOpen();
                }
             } else {
                if (data.type === "MESSAGE_FROM_PURYFI") {
-                  this.emit("message", data.data as ArrayBuffer);
+                  this.handleMessage(data.data as ArrayBuffer);
                } else if (data.type === "CLOSE") {
-                  this.emit("close");
+                  this.handleClose();
                } else if (data.type === "ERROR") {
-                  this.emit(
-                     "error",
+                  this.handleError(
                      new ConnectionError("SocketError", data.data as string)
                   );
                }
             }
          };
-      } else { 
+      } else {
          extension.runtime.onConnect.addListener((port) => {
             if (port.name === "puryfi-plugin-initiator") {
                this.upstream = port;
                this.upstream.onMessage.addListener((message) => {
                   let tmpRaw = message as Record<string, unknown>;
                   if (tmpRaw.data instanceof ArrayBuffer) {
-                     this.emit("message", tmpRaw.data);
+                     this.handleMessage(tmpRaw.data);
                   }
                });
                this.upstream.onDisconnect.addListener(() => {
-                  this.emit("close");
+                  this.handleClose();
                });
 
-               this.emit("open");
+               this.handleOpen();
             }
          });
       }

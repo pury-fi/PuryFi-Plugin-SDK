@@ -6,7 +6,7 @@ export const PluginIntents = [
    "readWBlistConfigurationState",
    "writeWBlistConfigurationState",
    "readUserState",
-   "readMediaProcessesState",
-   "requestMediaProcessesState",
+   "readMediaProcesses",
+   "requestMediaProcesses",
 ] as const;
 export type PluginIntent = (typeof PluginIntents)[number];
