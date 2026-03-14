@@ -41,8 +41,8 @@ npm run build
 
 The build produces two separate extension bundles under `build/`:
 
-- `build/chromium/` — Load as an unpacked extension in Chromium browsers via `chrome://extensions`.
-- `build/firefox/` — Load in Firefox using the commands below.
+- `build/chromium/` — Run as an unpacked extension in Chromium browsers via `chrome://extensions`.
+- `build/firefox/` — Run in Firefox using the commands below.
 
 **Run in Firefox:**
 

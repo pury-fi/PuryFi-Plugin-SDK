@@ -5,8 +5,8 @@ import {
    WriteOnlyPath,
    WriteOnlyValue,
 } from ".";
-import { PluginIntent } from "./intent";
-import { PluginManifest } from "./manifest";
+import { PluginIntent } from "./plugin-intent";
+import { PluginManifest } from "./plugin-manifest";
 import { Object } from "./object";
 
 export type TypeArgument<T> = T extends (type: infer A, payload: any) => any

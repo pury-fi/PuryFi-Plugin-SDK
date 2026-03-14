@@ -1040,17 +1040,17 @@ Plugin intents are required for sending and receiving most messages. Refer to [`
 
 What each plugin intent allows is as follows:
 
-| Value                           | Usage                                                                                                                      |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `readEnabledState`              | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with the `enabled` path.            |
-| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                                             |
-| `readLockConfigurationState`    | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `lockConfiguration.*` paths.   |
-| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                                    |
-| `readWBlistConfigurationState`  | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `wblistConfiguration.*` paths. |
-| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                                  |
-| `readUserState`                 | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `user.*` paths.                |
-| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                                     |
-| `readMediaProcesses`            | Allows sending the `subscribeToStaticMediaScans` and `unsubscribeFromStaticMediaScans` messages.                           |
+| Value                           | Usage                                                                                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `readEnabledState`              | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with the `enabled` path.                                                    |
+| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                                                                                     |
+| `readLockConfigurationState`    | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `lockConfiguration.*` paths.                                           |
+| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                                                                            |
+| `readWBlistConfigurationState`  | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `wblistConfiguration.*` paths.                                         |
+| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths, and allows sending the `enterLockPassword` and `enterLockEmergencyServerToken` messages. |
+| `readUserState`                 | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `user.*` paths.                                                        |
+| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                                                                             |
+| `readMediaProcesses`            | Allows sending the `subscribeToStaticMediaScans` and `unsubscribeFromStaticMediaScans` messages.                                                                   |
 
 ## `State`
 

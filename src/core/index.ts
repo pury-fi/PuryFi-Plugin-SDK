@@ -1,9 +1,9 @@
-export * from "./configuration.js";
+export * from "./plugin-configuration.js";
 export * from "./connection.js";
 export { IncomingMessageObject, OutgoingMessageObject } from "./message.js";
-export * from "./manifest.js";
-export * from "./intent.js";
-export * from "./configuration.js";
+export * from "./plugin-manifest.js";
+export * from "./plugin-intent.js";
+export * from "./plugin-configuration.js";
 export {
    State,
    StateAccess,
