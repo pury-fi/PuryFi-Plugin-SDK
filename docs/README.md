@@ -17,15 +17,15 @@
    - [Outgoing `getPluginIntents`](#outgoing-getpluginintents)
    - [Outgoing `getState`](#outgoing-getstate)
    - [Outgoing `setState`](#outgoing-setstate)
-   - [Outgoing `watchState`](#outgoing-watchstate)
-   - [Outgoing `unwatchState`](#outgoing-unwatchstate)
+   - [Outgoing `subscribeToState`](#outgoing-subscribetostate)
+   - [Outgoing `unsubscribeFromState`](#outgoing-unsubscribefromstate)
    - [Incoming `stateChange`](#incoming-statechange)
    - [Outgoing `enterLockPassword`](#outgoing-enterlockpassword)
    - [Outgoing `enterLockEmergencyServerToken`](#outgoing-enterlockemergencyservertoken)
    - [Outgoing `scanStaticMedia`](#outgoing-scanstaticmedia)
    - [Outgoing `censorStaticMedia`](#outgoing-censorstaticmedia)
-   - [Outgoing `watchStaticMediaScans`](#outgoing-watchstaticmediascans)
-   - [Outgoing `unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans)
+   - [Outgoing `subscribeToStaticMediaScans`](#outgoing-subscribetostaticmediascans)
+   - [Outgoing `unsubscribeFromStaticMediaScans`](#outgoing-unsubscribefromstaticmediascans)
    - [Incoming `staticMediaScan`](#incoming-staticmediascan)
 - [Types](#types)
    - [`PluginManifest`](#pluginmanifest)
@@ -47,7 +47,7 @@
 
 ## Overview
 
-The State API lets plugins read, write, and watch PuryFi's state using dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Each path has an access level controlling which operations are allowed.
+The State API lets plugins read, write, and subscribe to PuryFi's state using dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Each path has an access level controlling which operations are allowed.
 
 Outgoing messages are sent with `Connection.sendMessage`, and incoming messages are received with `Connection.on`.
 
@@ -64,8 +64,8 @@ What messages allow what functionality can be broken down as follows:
 - Incoming `ready`: Receive PuryFi's version and API version. This message must be responded to with a success response before any other messages are sent or received.
 - Outgoing `setPluginManifest`, `getPluginManifest`, `setPluginConfiguration`, and `getPluginConfiguration`, and incoming `configurationChange`: Get and set the manifest and user-adjustable configuration of the plugin.
 - Outgoing `requestPluginIntents`, `getPendingPluginIntents`, and `getPluginIntents`, and incoming `intentsGrant`: Request and wait for plugin intents to be granted. Intents are required for sending and receiving most messages. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
-- Outgoing `setState`, `getState`, `watchState`, and `unwatchState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
-- Outgoing `scanStaticMedia`, `censorStaticMedia`, `watchStaticMediaScans`, and `unwatchStaticMediaScans`, and incoming `staticMediaScan`: Scan and censor images, and subscribe to scan events happening as the user browses.
+- Outgoing `setState`, `getState`, `subscribeToState`, and `unsubscribeFromState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
+- Outgoing `scanStaticMedia`, `censorStaticMedia`, `subscribeToStaticMediaScans`, and `unsubscribeFromStaticMediaScans`, and incoming `staticMediaScan`: Scan and censor images, and subscribe to scan events happening as the user browses.
 - Outgoing `enterLockPassword` and `enterLockEmergencyServerToken`: Perform various actions also available to users through PuryFi's UI. Currently this includes entering a password and entering an emergency server token for a set lock.
 
 For further details and examples, navigate to the respective sections of each message type.
@@ -509,17 +509,17 @@ await connection.sendMessage("setState", {
 });
 ```
 
-## Outgoing `watchState`
+## Outgoing `subscribeToState`
 
 Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
-Subscribe to value change events at a path into state. Refer to [`unwatchState`](#outgoing-unwatchstate) for the outgoing message to unsubscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
+Subscribe to value change events at a path into state. Refer to [`unsubscribeFromState`](#outgoing-unsubscribefromstate) for the outgoing message to unsubscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
 ### Arguments
 
 ```typescript
 {
-   path: string; // The dot-separated path into state at which to start watching.
+   path: string; // The dot-separated path into state to subscribe to.
 }
 ```
 
@@ -553,17 +553,17 @@ Subscribe to value change events at a path into state. Refer to [`unwatchState`]
 
 Refer to [`stateChange`](#incoming-statechange) for examples.
 
-## Outgoing `unwatchState`
+## Outgoing `unsubscribeFromState`
 
 Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
-Unsubscribe from value change events at a path into state. Refer to [`watchState`](#outgoing-watchstate) for the outgoing message to subscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
+Unsubscribe from value change events at a path into state. Refer to [`subscribeToState`](#outgoing-subscribetostate) for the outgoing message to subscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
 ### Arguments
 
 ```typescript
 {
-   path: string; // The dot-separated path into state at which to stop watching.
+   path: string; // The dot-separated path into state to unsubscribe from.
 }
 ```
 
@@ -599,7 +599,7 @@ Refer to [`stateChange`](#incoming-statechange) for examples.
 
 ## Incoming `stateChange`
 
-Received when a value at a path into state changes. The plugin must be subscribed to value change events at the path to receive this message. Refer to [`watchState`](#outgoing-watchstate) for the outgoing message to subscribe, and [`unwatchState`](#outgoing-unwatchstate) for the outgoing message to unsubscribe.
+Received when a value at a path into state changes. The plugin must be subscribed to value change events at the path to receive this message. Refer to [`subscribeToState`](#outgoing-subscribetostate) for the outgoing message to subscribe, and [`unsubscribeFromState`](#outgoing-unsubscribefromstate) for the outgoing message to unsubscribe.
 
 ### Arguments
 
@@ -615,7 +615,7 @@ Received when a value at a path into state changes. The plugin must be subscribe
 Subscribe to change events of the end time of the lock configuration timer, log the next 10 events, then unsubscribe:
 
 ```typescript
-await connection.sendMessage("watchState", {
+await connection.sendMessage("subscribeToState", {
    path: "lockConfiguration.timer.endTime",
 });
 
@@ -628,7 +628,7 @@ connection.on("message", "stateChange", async function listener({ objects }) {
 
       count++;
       if (count >= 10) {
-         await connection.sendMessage("unwatchState", {
+         await connection.sendMessage("unsubscribeFromState", {
             path: "lockConfiguration.timer.endTime",
          });
          connection.off("message", "stateChange", listener);
@@ -876,11 +876,11 @@ if (scanRes.type === "ok") {
 }
 ```
 
-## Outgoing `watchStaticMediaScans`
+## Outgoing `subscribeToStaticMediaScans`
 
 Requires the `readMediaProcesses` plugin intent.
 
-Subscribe to static media scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans) for the outgoing message to unsubscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
+Subscribe to static media scan events happening as the user browses. Refer to [`unsubscribeFromStaticMediaScans`](#outgoing-unsubscribefromstaticmediascans) for the outgoing message to unsubscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
 ### Return
 
@@ -912,11 +912,11 @@ Subscribe to static media scan events happening as the user browses. Refer to [`
 
 Refer to [`staticMediaScan`](#incoming-staticmediascan) for examples.
 
-## Outgoing `unwatchStaticMediaScans`
+## Outgoing `unsubscribeFromStaticMediaScans`
 
 Requires the static media `readMediaProcesses` plugin intent.
 
-Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#outgoing-watchstaticmediascans) for the outgoing message to subscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
+Unsubscribe from scan events happening as the user browses. Refer to [`subscribeToStaticMediaScans`](#outgoing-subscribetostaticmediascans) for the outgoing message to subscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
 ### Return
 
@@ -950,7 +950,7 @@ Refer to [`staticMediaScan`](#incoming-staticmediascan) for examples.
 
 ## Incoming `staticMediaScan`
 
-Received when a static media scan happens as the user browses. The plugin must be subscribed to static media scan events to receive this message. Refer to [`watchStaticMediaScans`](#outgoing-watchstaticmediascans) for the outgoing message to subscribe, and [`unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans) for the outgoing message to unsubscribe.
+Received when a static media scan happens as the user browses. The plugin must be subscribed to static media scan events to receive this message. Refer to [`subscribeToStaticMediaScans`](#outgoing-subscribetostaticmediascans) for the outgoing message to subscribe, and [`unsubscribeFromStaticMediaScans`](#outgoing-unsubscribefromstaticmediascans) for the outgoing message to unsubscribe.
 
 ### Arguments
 
@@ -965,7 +965,7 @@ Received when a static media scan happens as the user browses. The plugin must b
 Subscribe to static media scan events, log the next 10 events, then unsubscribe.
 
 ```typescript
-await connection.sendMessage("watchStaticMediaScans", {});
+await connection.sendMessage("subscribeToStaticMediaScans", {});
 
 let count = 0;
 connection.on(
@@ -984,7 +984,7 @@ connection.on(
          console.log("Done receiving scan events");
 
          connection.off("message", "staticMediaScan", listener);
-         await connection.sendMessage("unwatchStaticMediaScans", {});
+         await connection.sendMessage("unsubscribeFromStaticMediaScans", {});
       }
    }
 );
@@ -1040,21 +1040,21 @@ Plugin intents are required for sending and receiving most messages. Refer to [`
 
 What each plugin intent allows is as follows:
 
-| Value                           | Usage                                                                                                        |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `readEnabledState`              | Allows sending the `getState`, `watchState`, and `unwatchState` messages with the `enabled` path.            |
-| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                               |
-| `readLockConfigurationState`    | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `lockConfiguration.*` paths.   |
-| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                      |
-| `readWBlistConfigurationState`  | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `wblistConfiguration.*` paths. |
-| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                    |
-| `readUserState`                 | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `user.*` paths.                |
-| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                       |
-| `readMediaProcesses`            | Allows sending the `watchStaticMediaScans` and `unwatchStaticMediaScans` messages.                           |
+| Value                           | Usage                                                                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `readEnabledState`              | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with the `enabled` path.            |
+| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                                             |
+| `readLockConfigurationState`    | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `lockConfiguration.*` paths.   |
+| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                                    |
+| `readWBlistConfigurationState`  | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `wblistConfiguration.*` paths. |
+| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                                  |
+| `readUserState`                 | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `user.*` paths.                |
+| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                                     |
+| `readMediaProcesses`            | Allows sending the `subscribeToStaticMediaScans` and `unsubscribeFromStaticMediaScans` messages.                           |
 
 ## `State`
 
-The root state object. Paths passed to `getState`, `setState`, `watchState`, and `unwatchState` are dot-separated paths into this type.
+The root state object. Paths passed to `getState`, `setState`, `subscribeToState`, and `unsubscribeFromState` are dot-separated paths into this type.
 
 ```typescript
 {

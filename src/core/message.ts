@@ -264,8 +264,8 @@ namespace OutgoingMessages {
 
    export type GetState = AnyOutgoingGetStateMessage;
 
-   export type WatchState = (
-      type: "watchState",
+   export type SubscribeToState = (
+      type: "subscribeToState",
       payload: {
          path: ReadOnlyPath;
       }
@@ -279,8 +279,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type UnwatchState = (
-      type: "unwatchState",
+   export type UnsubscribeFromState = (
+      type: "unsubscribeFromState",
       payload: {
          path: ReadOnlyPath;
       }
@@ -294,8 +294,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type WatchStaticMediaScans = (
-      type: "watchStaticMediaScans",
+   export type SubscribeToStaticMediaScans = (
+      type: "subscribeToStaticMediaScans",
       payload: {}
    ) =>
       | {
@@ -306,8 +306,8 @@ namespace OutgoingMessages {
            name: "internalError" | "invalidMessage" | "missingIntents";
         };
 
-   export type UnwatchStaticMediaScans = (
-      type: "unwatchStaticMediaScans",
+   export type UnsubscribeFromStaticMediaScans = (
+      type: "unsubscribeFromStaticMediaScans",
       payload: {}
    ) =>
       | {
@@ -410,10 +410,10 @@ export type OutgoingMessage =
    | OutgoingMessages.GetPluginConfiguration
    | OutgoingMessages.SetState
    | OutgoingMessages.GetState
-   | OutgoingMessages.WatchState
-   | OutgoingMessages.UnwatchState
-   | OutgoingMessages.WatchStaticMediaScans
-   | OutgoingMessages.UnwatchStaticMediaScans
+   | OutgoingMessages.SubscribeToState
+   | OutgoingMessages.UnsubscribeFromState
+   | OutgoingMessages.SubscribeToStaticMediaScans
+   | OutgoingMessages.UnsubscribeFromStaticMediaScans
    | OutgoingMessages.ScanStaticMedia
    | OutgoingMessages.CensorStaticMedia
    | OutgoingMessages.EnterLockPassword

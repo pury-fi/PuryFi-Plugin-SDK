@@ -81,11 +81,13 @@ connection.once("open", async () => {
       });
    }
 
-   await connection.sendMessage("watchStaticMediaScans", {}).then((res) => {
-      if (res.type === "error") {
-         console.error("Failed to watch static media scans:", res);
-      }
-   });
+   await connection
+      .sendMessage("subscribeToStaticMediaScans", {})
+      .then((res) => {
+         if (res.type === "error") {
+            console.error("Failed to subscribe to static media scans:", res);
+         }
+      });
 
    connection.on("message", "staticMediaScan", ({ objects }) => {
       const isLogEmpty = Boolean(configuration.logEmptyObjects?.value);
