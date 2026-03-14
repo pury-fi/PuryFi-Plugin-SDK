@@ -143,8 +143,8 @@ type AnyOutgoingGetStateMessage = {
  * Messages sent by plugins to the extension
  */
 namespace OutgoingMessages {
-   export type RequestIntents = (
-      type: "requestIntents",
+   export type RequestPluginIntents = (
+      type: "requestPluginIntents",
       payload: {
          intents: PluginIntent[];
       }
@@ -159,8 +159,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type GetPendingIntents = (
-      type: "getPendingIntents",
+   export type GetPendingPluginIntents = (
+      type: "getPendingPluginIntents",
       payload: {}
    ) =>
       | {
@@ -173,8 +173,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type GetIntents = (
-      type: "getIntents",
+   export type GetPluginIntents = (
+      type: "getPluginIntents",
       payload: {}
    ) =>
       | {
@@ -187,8 +187,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type SetManifest = (
-      type: "setManifest",
+   export type SetPluginManifest = (
+      type: "setPluginManifest",
       payload: {
          manifest: PluginManifest;
       }
@@ -202,8 +202,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type GetManifest = (
-      type: "getManifest",
+   export type GetPluginManifest = (
+      type: "getPluginManifest",
       payload: {}
    ) =>
       | {
@@ -216,8 +216,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type SetConfiguration = (
-      type: "setConfiguration",
+   export type SetPluginConfiguration = (
+      type: "setPluginConfiguration",
       payload: {
          configuration: PluginConfiguration;
       }
@@ -231,8 +231,8 @@ namespace OutgoingMessages {
            message: string;
         };
 
-   export type GetConfiguration = (
-      type: "getConfiguration",
+   export type GetPluginConfiguration = (
+      type: "getPluginConfiguration",
       payload: {}
    ) =>
       | {
@@ -261,8 +261,6 @@ namespace OutgoingMessages {
               | "unavailablePath";
            message: string;
         };
-
-   // TODO: Update return type of this message
 
    export type GetState = AnyOutgoingGetStateMessage;
 
@@ -403,13 +401,13 @@ namespace OutgoingMessages {
 }
 
 export type OutgoingMessage =
-   | OutgoingMessages.RequestIntents
-   | OutgoingMessages.GetPendingIntents
-   | OutgoingMessages.GetIntents
-   | OutgoingMessages.SetManifest
-   | OutgoingMessages.GetManifest
-   | OutgoingMessages.SetConfiguration
-   | OutgoingMessages.GetConfiguration
+   | OutgoingMessages.RequestPluginIntents
+   | OutgoingMessages.GetPendingPluginIntents
+   | OutgoingMessages.GetPluginIntents
+   | OutgoingMessages.SetPluginManifest
+   | OutgoingMessages.GetPluginManifest
+   | OutgoingMessages.SetPluginConfiguration
+   | OutgoingMessages.GetPluginConfiguration
    | OutgoingMessages.SetState
    | OutgoingMessages.GetState
    | OutgoingMessages.WatchState

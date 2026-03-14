@@ -33,17 +33,19 @@ server.once("connection", (connection) => {
          author: null,
          website: null,
       };
-      await connection.sendMessage("setManifest", { manifest }).then((res) => {
-         // Throw if we get an error response.
-         if (res.type === "error") {
-            console.error("Failed to set manifest:", res);
-         }
-      });
+      await connection
+         .sendMessage("setPluginManifest", { manifest })
+         .then((res) => {
+            // Throw if we get an error response.
+            if (res.type === "error") {
+               console.error("Failed to set manifest:", res);
+            }
+         });
 
       // Declare and send a configuration.
       let configuration: SDK.PluginConfiguration = {};
       await connection
-         .sendMessage("setConfiguration", { configuration })
+         .sendMessage("setPluginConfiguration", { configuration })
          .then((res) => {
             // Throw if we get an error response.
             if (res.type === "error") {
@@ -64,7 +66,7 @@ server.once("connection", (connection) => {
 
       // Get the intents that have been granted in the past.
       const { intents: grantedIntents } = await connection
-         .sendMessage("getIntents", {})
+         .sendMessage("getPluginIntents", {})
          .then((res) => {
             // Throw if we get an error response.
             if (res.type === "error") {
@@ -77,7 +79,7 @@ server.once("connection", (connection) => {
       if (!intents.every((intent) => grantedIntents.includes(intent))) {
          // Request the desired intents.
          await connection
-            .sendMessage("requestIntents", { intents })
+            .sendMessage("requestPluginIntents", { intents })
             .then((res) => {
                // Throw if we get an error response.
                if (res.type === "error") {

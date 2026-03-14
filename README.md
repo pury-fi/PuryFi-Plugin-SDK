@@ -94,7 +94,7 @@ await new Promise<void>((resolve) => {
 
 ### Step 3 — Send a Manifest and Configuration
 
-Optionally, send a manifest and an user-adjustable configuration. These can be sent at any time, any number of times, not just in between these steps.
+Optionally, send a manifest and an user-adjustable configuration for your plugin. These can be sent at any time, any number of times, not just in between these steps.
 
 ```typescript
 // ...
@@ -107,7 +107,7 @@ let manifest: SDK.PluginManifest = {
    author: null,
    website: null,
 };
-await connection.sendMessage("setManifest", { manifest });
+await connection.sendMessage("setPluginManifest", { manifest });
 
 // Declare and send a configuration.
 let configuration: SDK.PluginConfiguration = {
@@ -117,7 +117,7 @@ let configuration: SDK.PluginConfiguration = {
       name: "Example Field",
    },
 };
-await connection.sendMessage("setConfiguration", { configuration });
+await connection.sendMessage("setPluginConfiguration", { configuration });
 
 // Handle configuration change events.
 connection.on("message", "configurationChange", (payload) => {
@@ -128,7 +128,7 @@ connection.on("message", "configurationChange", (payload) => {
 
 ### Step 4 — Request Intents
 
-Plugins need to be granted intents to access most of the API. Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. Refer to [Intents](#intents) for a full list of intents and their description.
+Plugins need to be granted intents to access most of the API. Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. Refer to [Plugin Intent](docs/README.md#pluginintent) for a full list of intents and their description.
 
 ```typescript
 // ...
@@ -138,7 +138,7 @@ const intents: SDK.PluginIntent[] = ["readEnabledState", "writeEnabledState"];
 
 // Get the intents that have been granted in the past.
 const { intents: grantedIntents } = await connection
-   .sendMessage("getIntents", {})
+   .sendMessage("getPluginIntents", {})
    .then((res) => {
       // Throw if we get an error response.
       if (res.type === "error") {
@@ -150,7 +150,7 @@ const { intents: grantedIntents } = await connection
 // Check if any desired intents have not been granted.
 if (!intents.every((intent) => grantedIntents.includes(intent))) {
    // Request the desired intents.
-   await connection.sendMessage("requestIntents", { intents });
+   await connection.sendMessage("requestPluginIntents", { intents });
 
    // Wait for intents to be granted.
    await new Promise<void>((resolve) => {
@@ -178,7 +178,7 @@ If you require so, you may also get the intents requested and not yet granted.
 
 // Get the intents that have been requested and not yet granted.
 const { pendingIntents } = await connection
-   .sendMessage("getPendingIntents", {})
+   .sendMessage("getPendingPluginIntents", {})
    .then((res) => {
       // Throw if we get an error response.
       if (res.type === "error") {

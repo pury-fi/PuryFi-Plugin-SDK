@@ -7,14 +7,14 @@
 - [Overview](#overview)
 - [Messages](#messages)
    - [Incoming `ready`](#incoming-ready)
-   - [Outgoing `setManifest`](#outgoing-setmanifest)
-   - [Outgoing `getManifest`](#outgoing-getmanifest)
-   - [Outgoing `setConfiguration`](#outgoing-setconfiguration)
-   - [Outgoing `getConfiguration`](#outgoing-getconfiguration)
+   - [Outgoing `setPluginManifest`](#outgoing-setpluginmanifest)
+   - [Outgoing `getPluginManifest`](#outgoing-getpluginmanifest)
+   - [Outgoing `setPluginConfiguration`](#outgoing-setpluginconfiguration)
+   - [Outgoing `getPluginConfiguration`](#outgoing-getpluginconfiguration)
    - [Incoming `configurationChange`](#incoming-configurationchange)
-   - [Outgoing `requestIntents`](#outgoing-requestintents)
-   - [Outgoing `getPendingIntents`](#outgoing-getpendingintents)
-   - [Outgoing `getIntents`](#outgoing-getintents)
+   - [Outgoing `requestPluginIntents`](#outgoing-requestpluginintents)
+   - [Outgoing `getPendingPluginIntents`](#outgoing-getpendingpluginintents)
+   - [Outgoing `getPluginIntents`](#outgoing-getpluginintents)
    - [Outgoing `getState`](#outgoing-getstate)
    - [Outgoing `setState`](#outgoing-setstate)
    - [Outgoing `watchState`](#outgoing-watchstate)
@@ -27,7 +27,6 @@
    - [Outgoing `watchStaticMediaScans`](#outgoing-watchstaticmediascans)
    - [Outgoing `unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans)
    - [Incoming `staticMediaScan`](#incoming-staticmediascan)
-- [Intents](#intents)
 - [Types](#types)
    - [`PluginManifest`](#pluginmanifest)
    - [`PluginConfiguration`](#pluginconfiguration)
@@ -63,8 +62,8 @@ Messages are received with `Connection.on` or `Connection.once` and responses ar
 What messages allow what functionality can be broken down as follows:
 
 - Incoming `ready`: Receive PuryFi's version and API version. This message must be responded to with a success response before any other messages are sent or received.
-- Outgoing `setManifest`, `getManifest`, `setConfiguration`, and `getConfiguration`, and incoming `configurationChange`: Get and set the manifest and user-adjustable configuration of the plugin.
-- Outgoing `requestIntents`, `getPendingIntents`, and `getIntents`, and incoming `intentsGrant`: Request and wait for intents to be granted. Intents are required for sending and receiving most messages. Refer to [Intents](#intents) for a full list of intents and what they allow.
+- Outgoing `setPluginManifest`, `getPluginManifest`, `setPluginConfiguration`, and `getPluginConfiguration`, and incoming `configurationChange`: Get and set the manifest and user-adjustable configuration of the plugin.
+- Outgoing `requestPluginIntents`, `getPendingPluginIntents`, and `getPluginIntents`, and incoming `intentsGrant`: Request and wait for plugin intents to be granted. Intents are required for sending and receiving most messages. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 - Outgoing `setState`, `getState`, `watchState`, and `unwatchState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
 - Outgoing `scanStaticMedia`, `censorStaticMedia`, `watchStaticMediaScans`, and `unwatchStaticMediaScans`, and incoming `staticMediaScan`: Scan and censor images, and subscribe to scan events happening as the user browses.
 - Outgoing `enterLockPassword` and `enterLockEmergencyServerToken`: Perform various actions also available to users through PuryFi's UI. Currently this includes entering a password and entering an emergency server token for a set lock.
@@ -109,7 +108,7 @@ Received shortly after a connection opens. Contains PuryFi's version and API ver
 | `incompatibleApiVersion` | The plugin is not compatible with the plugin API version offered by PuryFi       |
 | string                   | Any other error that may occur inside the plugin while responding to the message |
 
-## Outgoing `setManifest`
+## Outgoing `setPluginManifest`
 
 Set the plugin manifest.
 
@@ -146,7 +145,7 @@ Set the plugin manifest.
 | `invalidMessage` | The message was malformed          |
 | `internalError`  | Something went wrong inside PuryFi |
 
-## Outgoing `getManifest`
+## Outgoing `getPluginManifest`
 
 Get the plugin manifest.
 
@@ -176,7 +175,7 @@ Get the plugin manifest.
 | `invalidMessage` | The message was malformed          |
 | `internalError`  | Something went wrong inside PuryFi |
 
-## Outgoing `setConfiguration`
+## Outgoing `setPluginConfiguration`
 
 Set the user-adjustable plugin configuration.
 
@@ -213,7 +212,7 @@ Set the user-adjustable plugin configuration.
 | `invalidMessage` | The message was malformed          |
 | `internalError`  | Something went wrong inside PuryFi |
 
-## Outgoing `getConfiguration`
+## Outgoing `getPluginConfiguration`
 
 Get the user-adjustable plugin configuration.
 
@@ -255,15 +254,15 @@ Received when the plugin configuration changes.
 }
 ```
 
-## Outgoing `requestIntents`
+## Outgoing `requestPluginIntents`
 
-Request intents to be granted. Refer to [Intents](#intents) for a full list of intents and what they allow.
+Request plugin intents to be granted. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
 ### Arguments
 
 ```typescript
 {
-   intents: string[]; // The intents to request.
+   intents: string[]; // The plugin intents to request.
 }
 ```
 
@@ -292,9 +291,9 @@ Request intents to be granted. Refer to [Intents](#intents) for a full list of i
 | `invalidMessage` | The message was malformed          |
 | `internalError`  | Something went wrong inside PuryFi |
 
-## Outgoing `getPendingIntents`
+## Outgoing `getPendingPluginIntents`
 
-Get the intents that have been requested and not yet granted.
+Get the plugin intents that have been requested and not yet granted.
 
 ### Return
 
@@ -303,7 +302,7 @@ Get the intents that have been requested and not yet granted.
 ```typescript
 {
    type: "ok";
-   pendingIntents: string[]; // The pending intents.
+   pendingIntents: string[]; // The pending plugin intents.
 }
 ```
 
@@ -322,9 +321,9 @@ Get the intents that have been requested and not yet granted.
 | `invalidMessage` | The message was malformed          |
 | `internalError`  | Something went wrong inside PuryFi |
 
-### Outgoing `getIntents`
+### Outgoing `getPluginIntents`
 
-Get the granted intents.
+Get the granted plugin intents.
 
 ### Return
 
@@ -333,7 +332,7 @@ Get the granted intents.
 ```typescript
 {
    type: "ok";
-   intents: string[]; // The granted intents.
+   intents: string[]; // The granted plugin intents.
 }
 ```
 
@@ -354,7 +353,7 @@ Get the granted intents.
 
 ## Outgoing `getState`
 
-Requires various intents to read at various paths. Refer to [Intents](#intents) for a full list of intents and what they allow.
+Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
 Get the value at a path into state. Refer to [State](#state) for all paths, and the types and access levels at each path.
 
@@ -384,18 +383,18 @@ Get the value at a path into state. Refer to [State](#state) for all paths, and 
    type: "error";
    name: "internalError" |
       "invalidMessage" |
-      "missingIntents" |
+      "missingPluginIntents" |
       "unavailablePath";
    message: string;
 }
 ```
 
-| Error Name        | Description                                                 |
-| ----------------- | ----------------------------------------------------------- |
-| `unavailablePath` | A value somewhere along the path is null                    |
-| `missingIntents`  | The required read intent for this path has not been granted |
-| `invalidMessage`  | The message was malformed                                   |
-| `internalError`   | Something went wrong inside PuryFi                          |
+| Error Name             | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `unavailablePath`      | A value somewhere along the path is null                           |
+| `missingPluginIntents` | The required read plugin intent for this path has not been granted |
+| `invalidMessage`       | The message was malformed                                          |
+| `internalError`        | Something went wrong inside PuryFi                                 |
 
 ### Examples
 
@@ -443,7 +442,7 @@ if (res.type === "ok") {
 
 ## Outgoing `setState`
 
-Requires various intents to write at various paths. Refer to [Intents](#intents) for a full list of intents and what they allow.
+Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
 Set the value at a path into state. Refer to [State](#state) for all paths, and the types and access levels at each path.
 
@@ -473,18 +472,18 @@ Set the value at a path into state. Refer to [State](#state) for all paths, and 
    type: "error";
    name: "internalError" |
       "invalidMessage" |
-      "missingIntents" |
+      "missingPluginIntents" |
       "unavailablePath";
    message: string;
 }
 ```
 
-| Error Name        | Description                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| `unavailablePath` | A value somewhere along the path is null                     |
-| `missingIntents`  | The required write intent for this path has not been granted |
-| `invalidMessage`  | The message was malformed                                    |
-| `internalError`   | Something went wrong inside PuryFi                           |
+| Error Name             | Description                                                         |
+| ---------------------- | ------------------------------------------------------------------- |
+| `unavailablePath`      | A value somewhere along the path is null                            |
+| `missingPluginIntents` | The required write plugin intent for this path has not been granted |
+| `invalidMessage`       | The message was malformed                                           |
+| `internalError`        | Something went wrong inside PuryFi                                  |
 
 ### Examples
 
@@ -512,7 +511,7 @@ await connection.sendMessage("setState", {
 
 ## Outgoing `watchState`
 
-Requires different intents depending on the passed path. Refer to [Intents](#intents) for a full list of intents and what they allow.
+Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
 Subscribe to value change events at a path into state. Refer to [`unwatchState`](#outgoing-unwatchstate) for the outgoing message to unsubscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
@@ -539,16 +538,16 @@ Subscribe to value change events at a path into state. Refer to [`unwatchState`]
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
    message: string;
 }
 ```
 
-| Error Name       | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `missingIntents` | The required read intent for this path has not been granted |
-| `invalidMessage` | The message was malformed                                   |
-| `internalError`  | Something went wrong inside PuryFi                          |
+| Error Name             | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `missingPluginIntents` | The required read plugin intent for this path has not been granted |
+| `invalidMessage`       | The message was malformed                                          |
+| `internalError`        | Something went wrong inside PuryFi                                 |
 
 ### Examples
 
@@ -556,7 +555,7 @@ Refer to [`stateChange`](#incoming-statechange) for examples.
 
 ## Outgoing `unwatchState`
 
-Requires different intents depending on the passed path. Refer to [Intents](#intents) for a full list of intents and what they allow.
+Requires different plugin intents depending on the passed path. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 
 Unsubscribe from value change events at a path into state. Refer to [`watchState`](#outgoing-watchstate) for the outgoing message to subscribe, and [`stateChange`](#incoming-statechange) for the incoming message received when the value at the path changes.
 
@@ -583,16 +582,16 @@ Unsubscribe from value change events at a path into state. Refer to [`watchState
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
    message: string;
 }
 ```
 
-| Error Name       | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `missingIntents` | The required read intent for this path has not been granted |
-| `invalidMessage` | The message was malformed                                   |
-| `internalError`  | Something went wrong inside PuryFi                          |
+| Error Name             | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `missingPluginIntents` | The required read plugin intent for this path has not been granted |
+| `invalidMessage`       | The message was malformed                                          |
+| `internalError`        | Something went wrong inside PuryFi                                 |
 
 ### Examples
 
@@ -640,7 +639,7 @@ connection.on("message", "stateChange", async function listener({ objects }) {
 
 ## Outgoing `enterLockPassword`
 
-Requires the `writeLockConfigurationState` intent.
+Requires the `writeLockConfigurationState` plugin intent.
 
 Enters a password for the set lock. If the password matches the one set for the lock, the lock is removed.
 
@@ -672,23 +671,23 @@ Enters a password for the set lock. If the password matches the one set for the 
       "noSetLock" |
       "internalError" |
       "invalidMessage" |
-      "missingIntents";
+      "missingPluginIntents";
    message: string;
 }
 ```
 
-| Error Name              | Description                                                   |
-| ----------------------- | ------------------------------------------------------------- |
-| `incorrectLockPassword` | The passed password does not match the one set for the lock   |
-| `noSetLockPassword`     | No lock with a password is set                                |
-| `noSetLock`             | No lock is set                                                |
-| `missingIntents`        | The `writeLockConfigurationState` intent has not been granted |
-| `invalidMessage`        | The message was malformed                                     |
-| `internalError`         | Something went wrong inside PuryFi                            |
+| Error Name              | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| `incorrectLockPassword` | The passed password does not match the one set for the lock          |
+| `noSetLockPassword`     | No lock with a password is set                                       |
+| `noSetLock`             | No lock is set                                                       |
+| `missingPluginIntents`  | The `writeLockConfigurationState` plugin intent has not been granted |
+| `invalidMessage`        | The message was malformed                                            |
+| `internalError`         | Something went wrong inside PuryFi                                   |
 
 ## Outgoing `enterLockEmergencyServerToken`
 
-Requires the `writeLockConfigurationState` intent.
+Requires the `writeLockConfigurationState` plugin intent.
 
 Enters an emergency server token for the set lock. If the token matches the one expected given the emergency client token of the lock, the lock is removed.
 
@@ -719,7 +718,7 @@ Enters an emergency server token for the set lock. If the token matches the one 
       "noSetLock" |
       "internalError" |
       "invalidMessage" |
-      "missingIntents";
+      "missingPluginIntents";
    message: string;
 }
 ```
@@ -728,13 +727,13 @@ Enters an emergency server token for the set lock. If the token matches the one 
 | ----------------------------------- | ------------------------------------------------------------------------------ |
 | `incorrectLockEmergencyServerToken` | The passed emergency server token does not match the expected one for the lock |
 | `noSetLock`                         | No lock is set                                                                 |
-| `missingIntents`                    | The `writeLockConfigurationState` intent has not been granted                  |
+| `missingPluginIntents`              | The `writeLockConfigurationState` plugin intent has not been granted           |
 | `invalidMessage`                    | The message was malformed                                                      |
 | `internalError`                     | Something went wrong inside PuryFi                                             |
 
 ## Outgoing `scanStaticMedia`
 
-Requires the `requestMediaProcesses` intent.
+Requires the `requestMediaProcesses` plugin intent.
 
 Scan a static image.
 
@@ -762,17 +761,20 @@ Scan a static image.
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents" | "invalidImage";
+   name: "internalError" |
+      "invalidMessage" |
+      "missingPluginIntents" |
+      "invalidImage";
    message: string;
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name             | Description                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| `invalidImage`         | The image data could not be decoded                            |
+| `missingPluginIntents` | The `requestMediaProcesses` plugin intent has not been granted |
+| `invalidMessage`       | The message was malformed                                      |
+| `internalError`        | Something went wrong inside PuryFi                             |
 
 ### Examples
 
@@ -794,7 +796,7 @@ if (res.type === "ok") {
 
 ## Outgoing `censorStaticMedia`
 
-Requires the `requestMediaProcesses` intent.
+Requires the `requestMediaProcesses` plugin intent.
 
 Censor a static image.
 
@@ -824,17 +826,20 @@ Censor a static image.
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents" | "invalidImage";
+   name: "internalError" |
+      "invalidMessage" |
+      "missingPluginIntents" |
+      "invalidImage";
    message: string;
 }
 ```
 
-| Error Name       | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `invalidImage`   | The image data could not be decoded                     |
-| `missingIntents` | The `requestMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                               |
-| `internalError`  | Something went wrong inside PuryFi                      |
+| Error Name             | Description                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| `invalidImage`         | The image data could not be decoded                            |
+| `missingPluginIntents` | The `requestMediaProcesses` plugin intent has not been granted |
+| `invalidMessage`       | The message was malformed                                      |
+| `internalError`        | Something went wrong inside PuryFi                             |
 
 ### Examples
 
@@ -873,7 +878,7 @@ if (scanRes.type === "ok") {
 
 ## Outgoing `watchStaticMediaScans`
 
-Requires the `readMediaProcesses` intent.
+Requires the `readMediaProcesses` plugin intent.
 
 Subscribe to static media scan events happening as the user browses. Refer to [`unwatchStaticMediaScans`](#outgoing-unwatchstaticmediascans) for the outgoing message to unsubscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
@@ -892,16 +897,16 @@ Subscribe to static media scan events happening as the user browses. Refer to [`
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
    message: string;
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name             | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `missingPluginIntents` | The `readMediaProcesses` plugin intent has not been granted |
+| `invalidMessage`       | The message was malformed                                   |
+| `internalError`        | Something went wrong inside PuryFi                          |
 
 ### Examples
 
@@ -909,7 +914,7 @@ Refer to [`staticMediaScan`](#incoming-staticmediascan) for examples.
 
 ## Outgoing `unwatchStaticMediaScans`
 
-Requires the static media `readMediaProcesses` intent.
+Requires the static media `readMediaProcesses` plugin intent.
 
 Unsubscribe from scan events happening as the user browses. Refer to [`watchStaticMediaScans`](#outgoing-watchstaticmediascans) for the outgoing message to subscribe, and [`staticMediaScan`](#incoming-staticmediascan) for the incoming message received when a scan happens.
 
@@ -928,16 +933,16 @@ Unsubscribe from scan events happening as the user browses. Refer to [`watchStat
 ```typescript
 {
    type: "error";
-   name: "internalError" | "invalidMessage" | "missingIntents";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
    message: string;
 }
 ```
 
-| Error Name       | Description                                          |
-| ---------------- | ---------------------------------------------------- |
-| `missingIntents` | The `readMediaProcesses` intent has not been granted |
-| `invalidMessage` | The message was malformed                            |
-| `internalError`  | Something went wrong inside PuryFi                   |
+| Error Name             | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `missingPluginIntents` | The `readMediaProcesses` plugin intent has not been granted |
+| `invalidMessage`       | The message was malformed                                   |
+| `internalError`        | Something went wrong inside PuryFi                          |
 
 ### Examples
 
@@ -985,22 +990,6 @@ connection.on(
 );
 ```
 
-## Intents
-
-Intents are required for sending and receiving most messages. Refer to [`requestIntents`](#outgoing-requestintents) for the outgoing message to request intents, [`getPendingIntents`](#outgoing-getpendingintents) for the outgoing message to get pending intents, and [`getIntents`](#outgoing-getintents) for the outgoing message to get granted intents.
-
-| Intent                          | Description                                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `readEnabledState`              | Allows sending the `getState`, `watchState`, and `unwatchState` messages with the `enabled` path.            |
-| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                               |
-| `readLockConfigurationState`    | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `lockConfiguration.*` paths.   |
-| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                      |
-| `readWBlistConfigurationState`  | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `wblistConfiguration.*` paths. |
-| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                    |
-| `readUserState`                 | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `user.*` paths.                |
-| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                       |
-| `readMediaProcesses`            | Allows sending the `watchStaticMediaScans` and `unwatchStaticMediaScans` messages.                           |
-
 ## Types
 
 ## `PluginManifest`
@@ -1035,7 +1024,7 @@ Intents are required for sending and receiving most messages. Refer to [`request
 
 ## `PluginIntent`
 
-Refer to [Intents](#intents) for what these intents allow.
+Plugin intents are required for sending and receiving most messages. Refer to [`requestPluginIntents`](#outgoing-requestpluginintents) for the outgoing message to request intents, [`getPendingPluginIntents`](#outgoing-getpendingpluginintents) for the outgoing message to get pending intents, and [`getPluginIntents`](#outgoing-getpluginintents) for the outgoing message to get granted intents.
 
 | Value                           |
 | ------------------------------- |
@@ -1048,6 +1037,20 @@ Refer to [Intents](#intents) for what these intents allow.
 | `readUserState`                 |
 | `readMediaProcesses`            |
 | `requestMediaProcesses`         |
+
+What each plugin intent allows is as follows:
+
+| Value                           | Usage                                                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `readEnabledState`              | Allows sending the `getState`, `watchState`, and `unwatchState` messages with the `enabled` path.            |
+| `writeEnabledState`             | Allows sending the `setState` message with the `enabled` path.                                               |
+| `readLockConfigurationState`    | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `lockConfiguration.*` paths.   |
+| `writeLockConfigurationState`   | Allows sending the `setState` message with `lockConfiguration.*` paths.                                      |
+| `readWBlistConfigurationState`  | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `wblistConfiguration.*` paths. |
+| `writeWBlistConfigurationState` | Allows sending the `setState` message with `wblistConfiguration.*` paths.                                    |
+| `readUserState`                 | Allows sending the `getState`, `watchState`, and `unwatchState` messages with `user.*` paths.                |
+| `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                       |
+| `readMediaProcesses`            | Allows sending the `watchStaticMediaScans` and `unwatchStaticMediaScans` messages.                           |
 
 ## `State`
 

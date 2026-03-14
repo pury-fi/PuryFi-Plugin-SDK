@@ -8,13 +8,7 @@ import {
    Return,
    TypeArgument,
 } from "./message.js";
-import {
-   compareVersions,
-   maxApiVersion,
-   minApiVersion,
-   parseVersion,
-} from "./upstream-connection.js";
-import { isNumber, isObject, isUndefined } from "./type-util.js";
+import { isUndefined } from "./type-util.js";
 import { ReadOnlyPath, ReadOnlyValue } from "./state.js";
 
 export type ConnectionMessageEvent<T extends TypeArgument<IncomingMessage>> = {
@@ -332,7 +326,6 @@ export abstract class Connection {
       );
    }
 
-   // TODO: Narrow return type
    private emitMessage(message: IncomingMessageObject): any {
       let currentResponse: any = undefined;
       this.onceMessageListeners[message.type]?.forEach(
@@ -377,31 +370,18 @@ export abstract class Connection {
    }
 
    protected handleMessage(payload: any) {
-      // TODO: Catch errors here
-
-      let message = decode(payload);
-
-      if (!isObject(message)) {
-         // TODO: Log error
-
-         return;
-      }
+      let message = decode(payload) as Record<string, unknown>;
 
       if (isUndefined(message.type)) {
-         if (!isNumber(message.responseId)) {
-            // TODO: Log error
-
-            return;
-         }
-
-         let responseCallback = this.responseListeners[message.responseId];
+         let responseCallback =
+            this.responseListeners[message.responseId as number];
          if (responseCallback === undefined) {
             this.emit(
                "error",
                new ConnectionError(
                   "ClientError",
                   "Response for unknown request received",
-                  message.responseId
+                  message.responseId as number
                )
             );
             this.log(
@@ -413,10 +393,8 @@ export abstract class Connection {
 
          responseCallback[0](message.payload);
 
-         delete this.responseListeners[message.responseId];
+         delete this.responseListeners[message.responseId as number];
       } else {
-         // TODO: Validate message type and payload
-
          const isExpectingResponse = message.responseId != null;
 
          let response;
@@ -436,7 +414,7 @@ export abstract class Connection {
          if (isExpectingResponse && response !== undefined) {
             const encodedMessage = this.encodeMessage({
                payload: response,
-               responseId: message.responseId,
+               responseId: message.responseId as number,
             });
             this.send(encodedMessage);
          }
@@ -478,4 +456,31 @@ export class ConnectionError extends Error {
    ) {
       super(message);
    }
+}
+
+const minApiVersion = [1, 0, 0] as const;
+const maxApiVersion = [2, 0, 0] as const;
+
+function parseVersion(value: string, parts: number): number[] | null {
+   const segments = value.split(".");
+   if (segments.length !== parts) {
+      return null;
+   }
+
+   const parsed = segments.map((segment) => Number(segment));
+   return parsed.every((entry) => Number.isInteger(entry) && entry >= 0)
+      ? parsed
+      : null;
+}
+
+function compareVersions(a: readonly number[], b: readonly number[]): number {
+   const maxLength = Math.max(a.length, b.length);
+   for (let index = 0; index < maxLength; index++) {
+      const left = a[index] ?? 0;
+      const right = b[index] ?? 0;
+      if (left > right) return 1;
+      if (left < right) return -1;
+   }
+
+   return 0;
 }

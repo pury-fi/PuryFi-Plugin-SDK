@@ -20,11 +20,13 @@ connection.once("open", async () => {
       author: null,
       website: null,
    };
-   await connection.sendMessage("setManifest", { manifest }).then((res) => {
-      if (res.type === "error") {
-         console.error("Failed to set manifest:", res);
-      }
-   });
+   await connection
+      .sendMessage("setPluginManifest", { manifest })
+      .then((res) => {
+         if (res.type === "error") {
+            console.error("Failed to set manifest:", res);
+         }
+      });
 
    let configuration: SDK.PluginConfiguration = {
       logEmptyObjects: {
@@ -34,7 +36,7 @@ connection.once("open", async () => {
       },
    };
    await connection
-      .sendMessage("setConfiguration", { configuration })
+      .sendMessage("setPluginConfiguration", { configuration })
       .then((res) => {
          if (res.type === "error") {
             console.error("Failed to set configuration:", res);
@@ -48,7 +50,7 @@ connection.once("open", async () => {
    const intents: SDK.PluginIntent[] = ["readMediaProcesses"];
 
    const { intents: grantedIntents } = await connection
-      .sendMessage("getIntents", {})
+      .sendMessage("getPluginIntents", {})
       .then((res) => {
          if (res.type === "error") {
             throw new Error(`Failed to get intents: ${res.message}`);
@@ -58,7 +60,7 @@ connection.once("open", async () => {
 
    if (!intents.every((intent) => grantedIntents.includes(intent))) {
       await connection
-         .sendMessage("requestIntents", { intents })
+         .sendMessage("requestPluginIntents", { intents })
          .then((res) => {
             if (res.type === "error") {
                console.error("Failed to request intents:", res);
