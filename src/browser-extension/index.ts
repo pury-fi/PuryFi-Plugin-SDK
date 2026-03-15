@@ -117,7 +117,6 @@ export class BrowserExtensionConnection extends Connection {
          this.upstream = upstream;
       } else {
          let upstream: browser.runtime.Port | null = null;
-         let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
 
          extension.runtime.onConnect.addListener((port) => {
             if (port.name === "puryfi-plugin-initiator") {
@@ -129,7 +128,6 @@ export class BrowserExtensionConnection extends Connection {
                   }
                });
                upstream.onDisconnect.addListener(() => {
-                  clearInterval(heartbeatIntervalId!);
                   this.handleClose();
                });
 
