@@ -46,7 +46,7 @@ server.once("connection", (connection) => {
          .sendMessage("setPluginManifest", { manifest })
          .then((res) => {
             if (res.type === "error") {
-               console.error("Failed to set manifest:", res);
+               throw new Error(`Failed to set plugin manifest: ${res.message}`);
             }
          });
 
@@ -56,7 +56,7 @@ server.once("connection", (connection) => {
          .sendMessage("getPluginIntents", {})
          .then((res) => {
             if (res.type === "error") {
-               throw new Error(`Failed to get intents: ${res.message}`);
+               throw new Error(`Failed to get plugin intents: ${res.message}`);
             }
             return res;
          });
@@ -66,7 +66,9 @@ server.once("connection", (connection) => {
             .sendMessage("requestPluginIntents", { intents })
             .then((res) => {
                if (res.type === "error") {
-                  console.error("Failed to request intents:", res);
+                  throw new Error(
+                     `Failed to request plugin intents: ${res.message}`
+                  );
                }
             });
 
@@ -109,8 +111,9 @@ server.once("connection", (connection) => {
          });
 
          if (res.type === "error") {
-            console.error(`Failed to censor ${filename}:`, res);
-            continue;
+            throw new Error(
+               `Failed to censor image ${filename}: ${res.message}`
+            );
          }
 
          await fs.writeFile(outputPath, res.image);

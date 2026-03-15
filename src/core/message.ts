@@ -304,6 +304,7 @@ namespace OutgoingMessages {
       | {
            type: "error";
            name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
         };
 
    export type UnsubscribeFromStaticMediaScans = (
@@ -316,6 +317,7 @@ namespace OutgoingMessages {
       | {
            type: "error";
            name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
         };
 
    export type ScanStaticMedia = (

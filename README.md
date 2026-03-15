@@ -142,7 +142,7 @@ const { intents: grantedIntents } = await connection
    .then((res) => {
       // Throw if we get an error response.
       if (res.type === "error") {
-         throw new Error(`Failed to get intents: ${res.message}`);
+         throw new Error(`Failed to get plugin intents: ${res.message}`);
       }
       return res;
    });

@@ -54,7 +54,7 @@ server.once("connection", (connection) => {
          .sendMessage("setPluginManifest", { manifest })
          .then((res) => {
             if (res.type === "error") {
-               console.error("Failed to set manifest:", res);
+               throw new Error(`Failed to set plugin manifest: ${res.message}`);
             }
          });
 
@@ -74,7 +74,9 @@ server.once("connection", (connection) => {
          .sendMessage("setPluginConfiguration", { configuration })
          .then((res) => {
             if (res.type === "error") {
-               console.error("Failed to set configuration:", res);
+               throw new Error(
+                  `Failed to set plugin configuration: ${res.message}`
+               );
             }
          });
 
@@ -87,7 +89,9 @@ server.once("connection", (connection) => {
             .sendMessage("setState", { path: "enabled", value: enabled })
             .then((res) => {
                if (res.type === "error") {
-                  console.error("Failed to set enabled state:", res);
+                  throw new Error(
+                     `Failed to set enabled state: ${res.message}`
+                  );
                }
             });
       }
@@ -116,7 +120,7 @@ server.once("connection", (connection) => {
          .sendMessage("getPluginIntents", {})
          .then((res) => {
             if (res.type === "error") {
-               throw new Error(`Failed to get intents: ${res.message}`);
+               throw new Error(`Failed to get plugin intents: ${res.message}`);
             }
             return res;
          });
@@ -126,7 +130,9 @@ server.once("connection", (connection) => {
             .sendMessage("requestPluginIntents", { intents })
             .then((res) => {
                if (res.type === "error") {
-                  console.error("Failed to request intents:", res);
+                  throw new Error(
+                     `Failed to request plugin intents: ${res.message}`
+                  );
                }
             });
 

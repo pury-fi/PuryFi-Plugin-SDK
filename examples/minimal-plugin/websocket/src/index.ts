@@ -38,7 +38,7 @@ server.once("connection", (connection) => {
          .then((res) => {
             // Throw if we get an error response.
             if (res.type === "error") {
-               console.error("Failed to set manifest:", res);
+               throw new Error(`Failed to set plugin manifest: ${res.message}`);
             }
          });
 
@@ -49,7 +49,9 @@ server.once("connection", (connection) => {
          .then((res) => {
             // Throw if we get an error response.
             if (res.type === "error") {
-               console.error("Failed to set configuration:", res);
+               throw new Error(
+                  `Failed to set plugin configuration: ${res.message}`
+               );
             }
          });
 
@@ -70,7 +72,7 @@ server.once("connection", (connection) => {
          .then((res) => {
             // Throw if we get an error response.
             if (res.type === "error") {
-               throw new Error(`Failed to get intents: ${res.message}`);
+               throw new Error(`Failed to get plugin intents: ${res.message}`);
             }
             return res;
          });
@@ -83,7 +85,9 @@ server.once("connection", (connection) => {
             .then((res) => {
                // Throw if we get an error response.
                if (res.type === "error") {
-                  console.error("Failed to request intents:", res);
+                  throw new Error(
+                     `Failed to request plugin intents: ${res.message}`
+                  );
                }
             });
 
