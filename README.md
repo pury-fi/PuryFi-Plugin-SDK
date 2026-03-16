@@ -2,6 +2,9 @@
 
 A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for state access, media processing, and more.
 
+> [!IMPORTANT]
+> The plugin SDK is compatible only with PuryFi 0.8.6.0 and above, which as of the time of writing is in beta. If you stumbled upon this project and are interested in joining the beta, please head over to the [Discord server](https://discord.gg/9aBBJNEJGC) to request access.
+
 ## Table of Contents
 
 - [How Communication Works](#how-communication-works)
