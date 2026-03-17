@@ -39,7 +39,13 @@ The SDK ships three entry points:
 
 ## Quick Start
 
-### Step 1 — Open a Connection
+### Step 1 — Register the plugin
+
+Before anything else, you need to register your plugin on PuryFi. Navigate to the Plugins tab on the options page of PuryFi, under the "Register new plugin" section, depending on your plugin kind either select WebSocket and enter the URL of the WebServer your plugin will open, which if you follow the next step as is will be `ws://localhost:8080`, or select Browser Extension and choose your extension from the dropdown.
+
+Any users of your plugin will also need to register your plugin on their PuryFi in the same way, so if you are developing for release, you should provide instructions for this step to your users.
+
+### Step 2 — Open a Connection
 
 Open a connection to PuryFi for your plugin kind.
 
@@ -74,7 +80,7 @@ connection.once("open", () => {
 });
 ```
 
-### Step 2 — Handle the Handshake
+### Step 3 — Handle the Handshake
 
 Shortly after the connection opens, PuryFi sends a `ready` message containing its version and API version. Respond to this message to confirm compatibility. Responses are sent by returning on the message handler.
 
@@ -95,7 +101,7 @@ await new Promise<void>((resolve) => {
 });
 ```
 
-### Step 3 — Send a Manifest and Configuration
+### Step 4 — Send a Manifest and Configuration
 
 Optionally, send a manifest and an user-adjustable configuration for your plugin. These can be sent at any time, any number of times, not just in between these steps.
 
@@ -129,7 +135,7 @@ connection.on("message", "configurationChange", (payload) => {
 });
 ```
 
-### Step 4 — Request Intents
+### Step 5 — Request Intents
 
 Plugins need to be granted intents to access most of the API. Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. Refer to [Plugin Intent](docs/README.md#pluginintent) for a full list of intents and their description.
 
