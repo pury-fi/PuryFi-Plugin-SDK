@@ -116,26 +116,23 @@ export class BrowserExtensionConnection extends Connection {
 
          this.upstream = upstream;
       } else {
-         let upstream: browser.runtime.Port | null = null;
 
-         extension.runtime.onConnect.addListener((port) => {
+         extension.runtime.onConnectExternal.addListener((port) => {
             if (port.name === "puryfi-plugin-initiator") {
-               upstream = port;
-               upstream.onMessage.addListener((message) => {
+               this.upstream = port;
+               this.upstream.onMessage.addListener((message) => {
                   let tmpRaw = message as Record<string, unknown>;
                   if (tmpRaw.data instanceof ArrayBuffer) {
                      this.handleMessage(tmpRaw.data);
                   }
                });
-               upstream.onDisconnect.addListener(() => {
+               this.upstream.onDisconnect.addListener(() => {
                   this.handleClose();
                });
 
                this.handleOpen();
             }
          });
-
-         this.upstream = upstream;
       }
    }
 

@@ -2,9 +2,9 @@ import * as SDK from "@pury-fi/plugin-sdk/browser-extension";
 
 const connection = new SDK.BrowserExtensionConnection();
 
-connection.once("open", async () => {
+connection.on("open", async () => {
    await new Promise<void>((resolve) => {
-      connection.once("message", "ready", (payload) => {
+      connection.on("message", "ready", (payload) => {
          const res = connection.handleReadyMessage(payload);
          if (res.type === "ok") {
             resolve();

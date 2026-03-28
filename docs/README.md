@@ -61,7 +61,7 @@ Messages are received with `Connection.on` or `Connection.once` and responses ar
 
 What messages allow what functionality can be broken down as follows:
 
-- Incoming `ready`: Receive PuryFi's version and API version. This message must be responded to with a success response before any other messages are sent or received.
+- Incoming `ready`: Receive PuryFi's version, API version and the installation-specific PuryFi Instance ID. This message must be responded to with a success response before any other messages are sent or received.
 - Outgoing `setPluginManifest`, `getPluginManifest`, `setPluginConfiguration`, and `getPluginConfiguration`, and incoming `configurationChange`: Get and set the manifest and user-adjustable configuration of the plugin.
 - Outgoing `requestPluginIntents`, `getPendingPluginIntents`, and `getPluginIntents`, and incoming `intentsGrant`: Request and wait for plugin intents to be granted. Intents are required for sending and receiving most messages. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 - Outgoing `setState`, `getState`, `subscribeToState`, and `unsubscribeFromState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
@@ -80,6 +80,7 @@ Received shortly after a connection opens. Contains PuryFi's version and API ver
 {
    version: string; // PuryFi's version.
    apiVersion: string; // The plugin API version that PuryFi offers. This is not the same as PuryFi's version.
+   instanceId: string; // PuryFi's Instance ID. This uniquely identifies the specific installation of PuryFi
 }
 ```
 

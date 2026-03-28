@@ -35,6 +35,7 @@ server.once("connection", (connection) => {
 
       await new Promise<void>((resolve) => {
          connection.once("message", "ready", (payload) => {
+            console.log("Received ready message with ID:", payload.instanceId);
             const res = connection.handleReadyMessage(payload);
             if (res.type === "ok") {
                resolve();

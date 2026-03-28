@@ -82,7 +82,7 @@ connection.once("open", () => {
 
 ### Step 3 — Handle the Handshake
 
-Shortly after the connection opens, PuryFi sends a `ready` message containing its version and API version. Respond to this message to confirm compatibility. Responses are sent by returning on the message handler.
+Shortly after the connection opens, PuryFi sends a `ready` message containing its version, the API version and the unique Instance ID of the PuryFi installation. Respond to this message to confirm compatibility. Responses are sent by returning on the message handler.
 
 ```typescript
 // ...

@@ -50,6 +50,7 @@ namespace IncomingMessages {
       payload: {
          version: string;
          apiVersion: string;
+         instanceId: string;
       }
    ) =>
       | {

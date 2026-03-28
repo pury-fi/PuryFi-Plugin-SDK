@@ -63,6 +63,7 @@ export abstract class Connection {
    } = {};
    private nextResponseId = 0;
    private debug: boolean = false;
+   public instanceId?: string;
 
    abstract send(data: ArrayBuffer | string): void;
 
@@ -294,6 +295,8 @@ export abstract class Connection {
          PayloadArgument<ExtractByTypeArgument<IncomingMessage, "ready">>
       >
    ): Return<ExtractByTypeArgument<IncomingMessage, "ready">> {
+      this.instanceId = payload.instanceId;
+
       const parsedApiVersion = parseVersion(payload.apiVersion, 3)!;
       if (
          compareVersions(parsedApiVersion, minApiVersion) < 0 ||
