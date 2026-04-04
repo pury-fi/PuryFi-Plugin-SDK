@@ -25,6 +25,9 @@ export type State = {
          name: string;
       };
    };
+   purevision: null | {
+      connected: number
+   }
 };
 
 export type HasIndexSignature<T> = string extends keyof T
@@ -200,6 +203,14 @@ export const StateAccess = {
             },
          },
       },
+      purevision: {
+         access: "noWrite",
+         entries: {
+            connected: {
+               access: "noWrite"
+            }
+         }
+      }
    },
 } as const;
 export type StateAccess = typeof StateAccess;

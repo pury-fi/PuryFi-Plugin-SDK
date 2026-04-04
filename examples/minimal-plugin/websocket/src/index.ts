@@ -6,7 +6,7 @@ import * as SDK from "@pury-fi/plugin-sdk/websocket";
 const server = new SDK.WebSocketServer(8080);
 
 // Wait for a connection.
-server.once("connection", (connection) => {
+server.on("connection", (connection) => {
    // Wait for the connection to open.
    connection.once("open", async () => {
       // Step 2 — Handle the Handshake
