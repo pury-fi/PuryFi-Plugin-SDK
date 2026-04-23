@@ -1,5 +1,7 @@
 # PuryFi Plugin SDK
 
+[![npm version](https://img.shields.io/npm/v/@pury-fi/plugin-sdk.svg)](https://www.npmjs.com/package/@pury-fi/plugin-sdk)
+
 A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for state access, media processing, and more.
 
 > [!IMPORTANT]
