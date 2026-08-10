@@ -1244,3 +1244,4 @@ The root state object. Paths passed to `getState`, `setState`, `subscribeToState
 |  10   | `MaleBreast`            |  23   | `Nipple`        |
 |  11   | `MaleBreastCovered`     |  24   | `HandCovered`   |
 |  12   | `FaceFemale`            |  25   | `Hand`          |
+|  26   | `Silhouette`            |       |                 |
