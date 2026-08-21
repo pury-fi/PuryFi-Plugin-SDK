@@ -8,6 +8,7 @@ export const PluginIntents = [
    "readUserState",
    "readMediaProcesses",
    "requestMediaProcesses",
+   "requestMediaCensorHooks",
    "readPureVisionState"
 ] as const;
 export type PluginIntent = (typeof PluginIntents)[number];

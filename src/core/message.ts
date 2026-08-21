@@ -87,6 +87,30 @@ namespace IncomingMessages {
          objects: Object[];
       }
    ) => void;
+
+   export type MediaCensorHookRequest = (
+      type: "mediaCensorHookRequest",
+      payload: {
+         requestId: string;
+         imageId: string;
+         stage: "before" | "after";
+         image: Uint8Array;
+         objects: Object[];
+         width: number;
+         height: number;
+         mimeType?: string;
+         url?: string;
+         segmentationMask?: Uint8Array;
+      }
+   ) =>
+      | {
+           type: "ok";
+           image: Uint8Array;
+           skipInternalCensoring?: boolean;
+        }
+      | {
+           type: "pass";
+        };
 }
 
 export type IncomingMessage =
@@ -94,7 +118,8 @@ export type IncomingMessage =
    | IncomingMessages.ConfigurationChange
    | IncomingMessages.IntentsGrant
    | IncomingMessages.StateChange
-   | IncomingMessages.StaticMediaScan;
+   | IncomingMessages.StaticMediaScan
+   | IncomingMessages.MediaCensorHookRequest;
 
 export type IncomingMessageObject = {
    [K in TypeArgument<IncomingMessage>]: {
@@ -321,6 +346,37 @@ namespace OutgoingMessages {
            message: string;
         };
 
+   export type SubscribeToMediaCensorHooks = (
+      type: "subscribeToMediaCensorHooks",
+      payload: {
+         stage?: "before" | "after" | "both";
+         onlyIfObjectsDetected?: boolean;
+      }
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
+
+   export type UnsubscribeFromMediaCensorHooks = (
+      type: "unsubscribeFromMediaCensorHooks",
+      payload: {
+         stage?: "before" | "after" | "both";
+      }
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
+
    export type ScanStaticMedia = (
       type: "scanStaticMedia",
       payload: {
@@ -417,6 +473,8 @@ export type OutgoingMessage =
    | OutgoingMessages.UnsubscribeFromState
    | OutgoingMessages.SubscribeToStaticMediaScans
    | OutgoingMessages.UnsubscribeFromStaticMediaScans
+   | OutgoingMessages.SubscribeToMediaCensorHooks
+   | OutgoingMessages.UnsubscribeFromMediaCensorHooks
    | OutgoingMessages.ScanStaticMedia
    | OutgoingMessages.CensorStaticMedia
    | OutgoingMessages.EnterLockPassword

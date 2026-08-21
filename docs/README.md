@@ -991,6 +991,108 @@ connection.on(
 );
 ```
 
+## Outgoing `subscribeToMediaCensorHooks`
+
+Requires the `requestMediaCensorHooks` plugin intent.
+
+Subscribe to media censor hook events (`before` and/or `after` internal censoring). This allows the plugin to intercept, modify, replace, or process images before and/or after PuryFi applies its internal censor modes.
+
+### Arguments
+
+```typescript
+{
+   stage?: "before" | "after" | "both"; // Optional stage filter (defaults to "both").
+   onlyIfObjectsDetected?: boolean; // Optional: only receive images containing detections.
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
+   message: string;
+}
+```
+
+## Outgoing `unsubscribeFromMediaCensorHooks`
+
+Requires the `requestMediaCensorHooks` plugin intent.
+
+Unsubscribe from media censor hook events.
+
+### Arguments
+
+```typescript
+{
+   stage?: "before" | "after" | "both";
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+## Incoming `mediaCensorHookRequest`
+
+Received when an image is processed during web browsing if the plugin is subscribed via `subscribeToMediaCensorHooks`.
+
+### Arguments
+
+```typescript
+{
+   requestId: string;
+   imageId: string;
+   stage: "before" | "after";
+   image: Uint8Array;
+   objects: Object[]; // Detected bounding boxes, labels, and scores.
+   width: number;
+   height: number;
+   mimeType?: string;
+   url?: string;
+}
+```
+
+### Response
+
+The plugin must return either `{ type: "ok", image: Uint8Array, skipInternalCensoring?: boolean }` to supply a modified image, or `{ type: "pass" }` to leave the image unchanged:
+
+```typescript
+connection.on(
+   "message",
+   "mediaCensorHookRequest",
+   async function ({ stage, image, objects, width, height }) {
+      if (stage === "before") {
+         // Apply custom pre-censoring or AI processing
+         const modifiedImage = await applyCustomCensor(image, objects);
+         return {
+            type: "ok",
+            image: modifiedImage,
+            skipInternalCensoring: true // Optionally skip PuryFi's internal GPU censoring
+         };
+      }
+      return { type: "pass" };
+   }
+);
+```
+
 ## Types
 
 ## `PluginManifest`
@@ -1052,6 +1154,7 @@ What each plugin intent allows is as follows:
 | `readUserState`                 | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `user.*` paths.                                                        |
 | `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                                                                             |
 | `readMediaProcesses`            | Allows sending the `subscribeToStaticMediaScans` and `unsubscribeFromStaticMediaScans` messages.                                                                   |
+| `requestMediaCensorHooks`       | Allows sending the `subscribeToMediaCensorHooks` and `unsubscribeFromMediaCensorHooks` messages and receiving `mediaCensorHookRequest` events.                    |
 
 ## `State`
 
