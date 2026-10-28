@@ -351,6 +351,7 @@ namespace OutgoingMessages {
       payload: {
          stage?: "before" | "after" | "both";
          onlyIfObjectsDetected?: boolean;
+         timeout?: number;
       }
    ) =>
       | {
