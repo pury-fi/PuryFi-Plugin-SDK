@@ -87,6 +87,60 @@ namespace IncomingMessages {
          objects: Object[];
       }
    ) => void;
+
+   export type MediaCensorHookRequest = (
+      type: "mediaCensorHookRequest",
+      payload: {
+         requestId: string;
+         imageId: string;
+         stage: "before" | "after";
+         image: Uint8Array;
+         objects: Object[];
+         width: number;
+         height: number;
+         mimeType?: string;
+         url?: string;
+         segmentationMask?: Uint8Array;
+         metadata?: {
+            rawObjects?: Object[];
+            censorName?: string;
+            censorConfig?: any;
+            isVideo?: boolean;
+         };
+      }
+   ) =>
+      | {
+           type: "ok";
+           image: Uint8Array;
+           skipInternalCensoring?: boolean;
+        }
+      | {
+           type: "pass";
+        };
+
+   export type ExportPluginSettings = (
+      type: "exportPluginSettings",
+      payload: Record<string, never> | { target?: string }
+   ) =>
+      | {
+           settings: Record<string, any>;
+        }
+      | null;
+
+   export type ImportPluginSettings = (
+      type: "importPluginSettings",
+      payload: {
+         settings: Record<string, any>;
+      }
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           message: string;
+        }
+      | void;
 }
 
 export type IncomingMessage =
@@ -94,7 +148,10 @@ export type IncomingMessage =
    | IncomingMessages.ConfigurationChange
    | IncomingMessages.IntentsGrant
    | IncomingMessages.StateChange
-   | IncomingMessages.StaticMediaScan;
+   | IncomingMessages.StaticMediaScan
+   | IncomingMessages.MediaCensorHookRequest
+   | IncomingMessages.ExportPluginSettings
+   | IncomingMessages.ImportPluginSettings;
 
 export type IncomingMessageObject = {
    [K in TypeArgument<IncomingMessage>]: {
@@ -321,6 +378,47 @@ namespace OutgoingMessages {
            message: string;
         };
 
+   export type SubscribeToMediaCensorHooks = (
+      type: "subscribeToMediaCensorHooks",
+      payload: {
+         stage?: "before" | "after" | "both";
+         onlyIfObjectsDetected?: boolean;
+         timeout?: number;
+         targets?: ("image" | "video")[];
+         includeVideo?: boolean;
+         onlyWhenModeActive?:
+            | boolean
+            | string[]
+            | {
+                 image?: boolean | string[];
+                 video?: boolean | string[];
+              };
+      }
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
+
+   export type UnsubscribeFromMediaCensorHooks = (
+      type: "unsubscribeFromMediaCensorHooks",
+      payload: {
+         stage?: "before" | "after" | "both";
+      }
+   ) =>
+      | {
+           type: "ok";
+        }
+      | {
+           type: "error";
+           name: "internalError" | "invalidMessage" | "missingIntents";
+           message: string;
+        };
+
    export type ScanStaticMedia = (
       type: "scanStaticMedia",
       payload: {
@@ -417,6 +515,8 @@ export type OutgoingMessage =
    | OutgoingMessages.UnsubscribeFromState
    | OutgoingMessages.SubscribeToStaticMediaScans
    | OutgoingMessages.UnsubscribeFromStaticMediaScans
+   | OutgoingMessages.SubscribeToMediaCensorHooks
+   | OutgoingMessages.UnsubscribeFromMediaCensorHooks
    | OutgoingMessages.ScanStaticMedia
    | OutgoingMessages.CensorStaticMedia
    | OutgoingMessages.EnterLockPassword

@@ -372,7 +372,7 @@ export abstract class Connection {
       }
    }
 
-   protected handleMessage(payload: any) {
+   protected async handleMessage(payload: any) {
       let message = decode(payload) as Record<string, unknown>;
 
       if (isUndefined(message.type)) {
@@ -403,6 +403,12 @@ export abstract class Connection {
          let response;
          try {
             response = this.emitMessage(message as any);
+            if (
+               response instanceof Promise ||
+               (response && typeof (response as any).then === "function")
+            ) {
+               response = await response;
+            }
          } catch (error) {
             this.emit(
                "error",

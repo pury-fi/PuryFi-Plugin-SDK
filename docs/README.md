@@ -27,10 +27,18 @@
    - [Outgoing `subscribeToStaticMediaScans`](#outgoing-subscribetostaticmediascans)
    - [Outgoing `unsubscribeFromStaticMediaScans`](#outgoing-unsubscribefromstaticmediascans)
    - [Incoming `staticMediaScan`](#incoming-staticmediascan)
+   - [Outgoing `subscribeToMediaCensorHooks`](#outgoing-subscribetomediacensorhooks)
+   - [Outgoing `unsubscribeFromMediaCensorHooks`](#outgoing-unsubscribefrommediacensorhooks)
+   - [Incoming `mediaCensorHookRequest`](#incoming-mediacensorhookrequest)
+   - [Incoming `exportPluginSettings`](#incoming-exportpluginsettings)
+   - [Incoming `importPluginSettings`](#incoming-importpluginsettings)
 - [Types](#types)
    - [`PluginManifest`](#pluginmanifest)
+   - [`PluginCensorMode`](#plugincensormode)
    - [`PluginConfiguration`](#pluginconfiguration)
    - [`PluginConfigurationField`](#pluginconfigurationfield)
+   - [`PluginConfigurationOption`](#pluginconfigurationoption)
+   - [`PluginActionConfigurationOption`](#pluginactionconfigurationoption)
    - [`PluginIntent`](#pluginintent)
    - [`State`](#state)
    - [`LockConfiguration`](#lockconfiguration)
@@ -66,6 +74,8 @@ What messages allow what functionality can be broken down as follows:
 - Outgoing `requestPluginIntents`, `getPendingPluginIntents`, and `getPluginIntents`, and incoming `intentsGrant`: Request and wait for plugin intents to be granted. Intents are required for sending and receiving most messages. Refer to [Plugin Intent](#pluginintent) for a full list of intents and what they allow.
 - Outgoing `setState`, `getState`, `subscribeToState`, and `unsubscribeFromState`, and incoming `stateChange`: Get, set, and subscribe to changes to PuryFi's state through dot-separated paths like `lockConfiguration.timer.endTime` or `user.supportTier`. Not all of PuryFi's state is currently exposed to plugins; the exposed state currently includes whether the extension is enabled, the lock configuration, the whitelist/blacklist configuration, and the logged-in user. Note that some state is also only accessible for reading, and some only for writing. Refer to [State](#state) for all paths, and the types and access levels at each path.
 - Outgoing `scanStaticMedia`, `censorStaticMedia`, `subscribeToStaticMediaScans`, and `unsubscribeFromStaticMediaScans`, and incoming `staticMediaScan`: Scan and censor images, and subscribe to scan events happening as the user browses.
+- Outgoing `subscribeToMediaCensorHooks` and `unsubscribeFromMediaCensorHooks`, and incoming `mediaCensorHookRequest`: Intercept media processing during PuryFi's censoring pipeline (before or after internal censoring), inspect detected objects and metadata, and return custom censored or inpainted media.
+- Incoming `exportPluginSettings` and `importPluginSettings`: Export and import plugin settings during PuryFi configuration backups or synchronizations.
 - Outgoing `enterLockPassword` and `enterLockEmergencyServerToken`: Perform various actions also available to users through PuryFi's UI. Currently this includes entering a password and entering an emergency server token for a set lock.
 
 For further details and examples, navigate to the respective sections of each message type.
@@ -991,6 +1001,238 @@ connection.on(
 );
 ```
 
+## Outgoing `subscribeToMediaCensorHooks`
+
+Subscribes the plugin to media censor hooks. When subscribed, PuryFi will invoke the plugin with `mediaCensorHookRequest` messages whenever media (images or video frames) is processed according to the subscription parameters. Requires the `requestMediaCensorHooks` plugin intent.
+
+### Arguments
+
+```typescript
+{
+   stage?: "before" | "after" | "both"; // When to intercept media ("before" internal censoring, "after", or "both"). Defaults to "both".
+   onlyIfObjectsDetected?: boolean;    // Only invoke the hook if detection objects were found. Defaults to false.
+   timeout?: number;                  // Maximum time in milliseconds to wait for the hook response (default 10000).
+   targets?: ("image" | "video")[];    // Target media types to intercept. Defaults to ["image"].
+   includeVideo?: boolean;             // Convenience shorthand to include video targets.
+   onlyWhenModeActive?:               // Filter invocations to when specific censor mode(s) are active.
+      | boolean
+      | string[]
+      | {
+           image?: boolean | string[];
+           video?: boolean | string[];
+        };
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
+   message: string;
+}
+```
+
+| Error Name             | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `missingPluginIntents` | The `requestMediaCensorHooks` plugin intent was not granted |
+| `invalidMessage`       | The message payload was invalid                             |
+| `internalError`        | Something went wrong inside PuryFi                          |
+
+### Examples
+
+Subscribe to pre-censoring hooks for images:
+
+```typescript
+await connection.sendMessage("subscribeToMediaCensorHooks", {
+   stage: "before",
+   onlyIfObjectsDetected: true,
+   targets: ["image"],
+   timeout: 8000,
+});
+```
+
+## Outgoing `unsubscribeFromMediaCensorHooks`
+
+Unsubscribes the plugin from media censor hooks. Requires the `requestMediaCensorHooks` plugin intent.
+
+### Arguments
+
+```typescript
+{
+   stage?: "before" | "after" | "both"; // Optional stage filter to unsubscribe from.
+}
+```
+
+### Return
+
+**Success:**
+
+```typescript
+{
+   type: "ok";
+}
+```
+
+**Error:**
+
+```typescript
+{
+   type: "error";
+   name: "internalError" | "invalidMessage" | "missingPluginIntents";
+   message: string;
+}
+```
+
+## Incoming `mediaCensorHookRequest`
+
+Received when PuryFi intercepts media during censoring and the plugin has an active hook subscription. The plugin can process the media (e.g. apply custom blurring, pixelation, AI inpainting, or GPU-based censoring) and return the modified image, or return a pass response to leave it untouched.
+
+The message handler may be `async` (returning a `Promise`). PuryFi will await the response up to the configured `timeout`.
+
+### Arguments
+
+```typescript
+{
+   requestId: string;               // Unique ID for this request.
+   imageId: string;                 // Identifier for the media item being processed.
+   stage: "before" | "after";       // The pipeline stage ("before" internal censoring or "after").
+   image: Uint8Array;               // The encoded image bytes (PNG, JPEG, WebP, etc.).
+   objects: Object[];               // Detected objects within the image.
+   width: number;                   // Media width in pixels.
+   height: number;                  // Media height in pixels.
+   mimeType?: string;               // MIME type of the image if known.
+   url?: string;                    // Source URL of the media (requires `readMediaSource` intent).
+   segmentationMask?: Uint8Array;   // Binary segmentation mask if silhouette/person segmentation is active.
+   metadata?: {
+      rawObjects?: Object[];        // Raw pre-filtering detection objects.
+      censorName?: string;          // Identifier of the currently active censor mode.
+      censorConfig?: any;           // Active configuration parameters for the censor mode.
+      isVideo?: boolean;            // Whether this frame originates from a video stream.
+   };
+}
+```
+
+### Return
+
+**Success (Modified Image):**
+
+```typescript
+{
+   type: "ok";
+   image: Uint8Array;               // The modified image bytes.
+   skipInternalCensoring?: boolean; // Set to true (when stage is "before") to skip PuryFi's built-in censoring.
+}
+```
+
+**Pass (Leave Unmodified):**
+
+```typescript
+{
+   type: "pass";
+}
+```
+
+### Examples
+
+Register a hook handler to replace detections with custom censoring:
+
+```typescript
+connection.on("message", "mediaCensorHookRequest", async (payload) => {
+   const { image, objects, width, height, stage } = payload;
+
+   if (objects.length === 0) {
+      return { type: "pass" };
+   }
+
+   // Perform custom censoring or AI inpainting (can be async)
+   const censoredImage = await myCustomCensorPipeline(image, objects, width, height);
+
+   return {
+      type: "ok",
+      image: censoredImage,
+      skipInternalCensoring: true, // Prevents default PuryFi blur/pixelation
+   };
+});
+```
+
+## Incoming `exportPluginSettings`
+
+Received when PuryFi creates a backup or synchronizes configuration. The plugin should return its current settings so they can be preserved.
+
+### Arguments
+
+```typescript
+{
+   target?: string; // Optional target identifier or empty object.
+}
+```
+
+### Return
+
+```typescript
+{
+   settings: Record<string, any>; // Serialized plugin settings dictionary.
+} | null
+```
+
+### Examples
+
+```typescript
+connection.on("message", "exportPluginSettings", () => {
+   return {
+      settings: myCurrentPluginSettings,
+   };
+});
+```
+
+## Incoming `importPluginSettings`
+
+Received when PuryFi restores settings from a backup or synced profile.
+
+### Arguments
+
+```typescript
+{
+   settings: Record<string, any>; // The settings dictionary to restore.
+}
+```
+
+### Return
+
+```typescript
+{
+   type: "ok";
+} | {
+   type: "error";
+   message: string;
+} | void
+```
+
+### Examples
+
+```typescript
+connection.on("message", "importPluginSettings", ({ settings }) => {
+   try {
+      applyRestoredSettings(settings);
+      return { type: "ok" };
+   } catch (err: any) {
+      return { type: "error", message: err.message };
+   }
+});
+```
+
 ## Types
 
 ## `PluginManifest`
@@ -1002,6 +1244,22 @@ connection.on(
    description: null | string; // The plugin's description.
    author: null | string; // The plugin's author.
    website: null | string; // The plugin's website.
+   icon?: string; // Optional icon for the plugin (base64 data URI, URL, or SVG).
+   censorModes?: PluginCensorMode[]; // Optional custom censor modes contributed by this plugin.
+}
+```
+
+## `PluginCensorMode`
+
+```typescript
+{
+   id: string; // Unique identifier of the censor mode (e.g. "my-custom-censor").
+   name: string; // User-facing display name of the censor mode in PuryFi's mode selector.
+   tooltip?: string; // Optional tooltip explaining the censor mode.
+   icon?: string; // Optional icon for the censor mode.
+   supportsVideo?: boolean; // Whether the mode supports video streams.
+   supportsImage?: boolean; // Whether the mode supports static images.
+   supportsMixedMode?: boolean; // Whether this mode can be selected per-class in Mixed Mode.
 }
 ```
 
@@ -1017,9 +1275,33 @@ connection.on(
 
 ```typescript
 {
-   name: string; // The name of the field. This is only used for display purposes.
-   type: "string" | "number" | "boolean"; // The type of the field.
-   value: string | number | boolean; // The value of the field.
+   name: string; // The display name of the field.
+   type: "string" | "number" | "boolean" | "select" | "multiselect" | "action" | "color" | string; // The input type.
+   value: string | number | boolean | (string | number)[]; // The value of the field.
+   options?: PluginConfigurationOption[] | Record<string, { name: string }> | PluginActionConfigurationOption | any; // Options for select, multiselect, or action.
+   buttonLabel?: string; // Optional label for action buttons.
+   description?: string; // Optional description displayed below the input.
+   tooltip?: string; // Optional tooltip text.
+}
+```
+
+## `PluginConfigurationOption`
+
+```typescript
+{
+   label?: string; // Display label for this option.
+   name?: string; // Alternative display name for this option.
+   value: string | number; // Underlying value for this option.
+}
+```
+
+## `PluginActionConfigurationOption`
+
+```typescript
+{
+   buttonLabel?: string; // Button text.
+   hideHeader?: boolean; // Whether to hide the standard setting header row.
+   [key: string]: any;
 }
 ```
 
@@ -1038,6 +1320,10 @@ Plugin intents are required for sending and receiving most messages. Refer to [`
 | `readUserState`                 |
 | `readMediaProcesses`            |
 | `requestMediaProcesses`         |
+| `requestMediaCensorHooks`       |
+| `readPureVisionState`           |
+| `readMediaSource`               |
+| `readMediaContent`              |
 
 What each plugin intent allows is as follows:
 
@@ -1052,6 +1338,10 @@ What each plugin intent allows is as follows:
 | `readUserState`                 | Allows sending the `getState`, `subscribeToState`, and `unsubscribeFromState` messages with `user.*` paths.                                                        |
 | `requestMediaProcesses`         | Allows sending the `scanStaticMedia` and `censorStaticMedia` messages.                                                                                             |
 | `readMediaProcesses`            | Allows sending the `subscribeToStaticMediaScans` and `unsubscribeFromStaticMediaScans` messages.                                                                   |
+| `requestMediaCensorHooks`       | Allows sending `subscribeToMediaCensorHooks` and `unsubscribeFromMediaCensorHooks` messages, and receiving/responding to `mediaCensorHookRequest`.                |
+| `readPureVisionState`           | Allows reading Pure Vision backend connection state.                                                                                                               |
+| `readMediaSource`               | Allows receiving the original media URL or source address in `mediaCensorHookRequest` messages.                                                                    |
+| `readMediaContent`              | Allows receiving the raw media buffer/image payload in `mediaCensorHookRequest` messages.                                                                          |
 
 ## `State`
 
@@ -1244,3 +1534,4 @@ The root state object. Paths passed to `getState`, `setState`, `subscribeToState
 |  10   | `MaleBreast`            |  23   | `Nipple`        |
 |  11   | `MaleBreastCovered`     |  24   | `HandCovered`   |
 |  12   | `FaceFemale`            |  25   | `Hand`          |
+|  26   | `Silhouette`            |       |                 |

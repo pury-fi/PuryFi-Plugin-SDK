@@ -5,7 +5,7 @@
 A TypeScript SDK for building plugins for the PuryFi browser extension. Provides typed message sending and receiving for state access, media processing, and more.
 
 > [!IMPORTANT]
-> The plugin SDK is compatible only with PuryFi 0.8.6.0 and above, which as of the time of writing is in beta. If you stumbled upon this project and are interested in joining the beta, please head over to the [Discord server](https://discord.gg/9aBBJNEJGC) to request access.
+> The plugin SDK is compatible with PuryFi 0.8.6.0 and above. Advanced capabilities such as media censor hooks, custom censor modes, and setting synchronization require PuryFi 0.8.8.0 or newer. If you are interested in joining the beta, please head over to the [Discord server](https://discord.gg/9aBBJNEJGC) to request access.
 
 ## Terms and Conditions
 Please read our [Terms of Service for Plugins](https://pury.fi/site/puryfi-plugin-terms-of-service). 
@@ -15,6 +15,8 @@ Please read our [Terms of Service for Plugins](https://pury.fi/site/puryfi-plugi
 - [How Communication Works](#how-communication-works)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Media Censor Hooks](#media-censor-hooks)
+- [Settings Export and Import](#settings-export-and-import)
 - [Chromium Bridge Setup](#chromium-bridge-setup)
 - [Development](#development)
 
@@ -108,27 +110,47 @@ await new Promise<void>((resolve) => {
 
 ### Step 4 — Send a Manifest and Configuration
 
-Optionally, send a manifest and an user-adjustable configuration for your plugin. These can be sent at any time, any number of times, not just in between these steps.
+Optionally, send a manifest and a user-adjustable configuration for your plugin. These can be sent at any time, any number of times, not just in between these steps. Plugins can also register custom censor modes or rich configuration inputs (such as select dropdowns, multi-select, color pickers, and action buttons).
 
 ```typescript
 // ...
 
-// Declare and send a manifest.
+// Declare and send a manifest (optionally defining custom censor modes).
 let manifest: SDK.PluginManifest = {
-   name: "Example Plugin",
+   name: "Example Censor Plugin",
    version: "1.0.0",
-   description: "A plugin example",
-   author: null,
+   description: "An example plugin adding a custom censor mode",
+   author: "Community Developer",
    website: null,
+   censorModes: [
+      {
+         id: "custom-blur",
+         name: "Custom Blur Mode",
+         tooltip: "Applies custom blurring to detected content",
+         supportsImage: true,
+         supportsVideo: true,
+         supportsMixedMode: true,
+      },
+   ],
 };
 await connection.sendMessage("setPluginManifest", { manifest });
 
-// Declare and send a configuration.
+// Declare and send a configuration with diverse UI controls.
 let configuration: SDK.PluginConfiguration = {
-   threshold: {
-      value: 0,
+   strength: {
+      name: "Censor Strength",
       type: "number",
-      name: "Example Field",
+      value: 15,
+      description: "Intensity of the censoring filter",
+   },
+   style: {
+      name: "Filter Style",
+      type: "select",
+      value: "gaussian",
+      options: [
+         { label: "Gaussian Blur", value: "gaussian" },
+         { label: "Box Blur", value: "box" },
+      ],
    },
 };
 await connection.sendMessage("setPluginConfiguration", { configuration });
@@ -142,13 +164,19 @@ connection.on("message", "configurationChange", (payload) => {
 
 ### Step 5 — Request Intents
 
-Plugins need to be granted intents to access most of the API. Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. Refer to [Plugin Intent](docs/README.md#pluginintent) for a full list of intents and their description.
+Plugins need to be granted intents to access most of the API. Available intents include state access (`readEnabledState`, `writeEnabledState`, `readLockConfigurationState`, etc.), media processing (`requestMediaProcesses`, `readMediaProcesses`), and real-time intercepting (`requestMediaCensorHooks`, `readMediaSource`, `readMediaContent`, `readPureVisionState`).
+
+Get the intents your plugin has been granted in the past, if there are intents you desire and have not been granted, request them and wait for them to be granted. Like with sending a manifest and configuration, this can be done at any point, any number of times, not just between these steps. Refer to [Plugin Intent](docs/README.md#pluginintent) for a full list of intents and their description.
 
 ```typescript
 // ...
 
 // Declare your desired intents.
-const intents: SDK.PluginIntent[] = ["readEnabledState", "writeEnabledState"];
+const intents: SDK.PluginIntent[] = [
+   "readEnabledState",
+   "writeEnabledState",
+   "requestMediaCensorHooks",
+];
 
 // Get the intents that have been granted in the past.
 const { intents: grantedIntents } = await connection
@@ -207,6 +235,65 @@ const { pendingIntents } = await connection
 After this point you may implement the main functionality of your plugin, remembering to update your desired plugins as needed and reacting to configuration changes if necessary.
 
 For documentation, refer to [Documentation](/docs/README.md), and for entire example plugins, refer to [Examples](/examples/README.md).
+
+## Media Censor Hooks
+
+Starting with PuryFi 0.8.8.0, plugins can register custom censor modes or hook directly into PuryFi's censoring pipeline (supporting images, video frames, and Mixed Mode).
+
+### 1. Subscribe to Hooks
+
+With the `requestMediaCensorHooks` intent granted, subscribe to hook events:
+
+```typescript
+await connection.sendMessage("subscribeToMediaCensorHooks", {
+   stage: "before", // "before" internal censoring (e.g. to replace it) or "after"
+   onlyIfObjectsDetected: true,
+   targets: ["image"],
+   timeout: 8000,
+});
+```
+
+### 2. Handle Intercepted Media
+
+Incoming `mediaCensorHookRequest` message listeners can be `async`. Return `{ type: "ok", image: Uint8Array, skipInternalCensoring: true }` to deliver modified media, or `{ type: "pass" }` to leave it unchanged:
+
+```typescript
+connection.on("message", "mediaCensorHookRequest", async (payload) => {
+   const { image, objects, width, height, stage } = payload;
+
+   if (objects.length === 0) {
+      return { type: "pass" };
+   }
+
+   // Process the image bytes (e.g. canvas, WebGL, AI inpainting)
+   const modifiedImage = await myCustomCensorPipeline(image, objects);
+
+   return {
+      type: "ok",
+      image: modifiedImage,
+      skipInternalCensoring: true, // Prevents default blur/pixelate from running on top
+   };
+});
+```
+
+## Settings Export and Import
+
+When users backup or synchronize their PuryFi profiles, PuryFi can export and import your plugin's configuration:
+
+```typescript
+// Provide settings during profile export
+connection.on("message", "exportPluginSettings", () => {
+   return {
+      settings: currentSettings,
+   };
+});
+
+// Restore settings when a profile is imported
+connection.on("message", "importPluginSettings", ({ settings }) => {
+   Object.assign(currentSettings, settings);
+   return { type: "ok" };
+});
+```
 
 ## Chromium Bridge Setup
 

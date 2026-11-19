@@ -25,10 +25,11 @@ export enum Label {
    Nipple = 23,
    HandCovered = 24,
    Hand = 25,
+   Silhouette = 26,
 }
 
 export function isLabel(value: any): value is Label {
-   return typeof value === "number" && value >= 0 && value <= 25;
+   return typeof value === "number" && value >= 0 && value <= 26;
 }
 
 export interface Rect {
